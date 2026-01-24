@@ -1,8 +1,37 @@
-# DBModel
+# KVStore - Minimal Key-Value Abstraction for Go
 
-A complete interface to unifie all different Golang Databases, from memory databases to on disk databases and network
+A minimal, zero-overhead key-value store abstraction for Go. Write your data logic once, then choose your database by changing imports.
 
-It provides a complete interface so the code stays clean and to avoid excessive types for IO operation
-The core value is freedom of implementation, you can tweak settings and implementations how you like it
-we only provide simple interface and it's up to you to customize it to you're need, or you can make use 
-of already in place implementations
+## Philosophy
+
+- Zero-overhead abstraction
+- Raw []byte values (you control serialization): You choose serialization (JSON, protobuf, msgpack, custom)
+- Context-aware API: Consistent with Go conventions, even for embedded stores
+- Minimal dependencies
+
+## Quick Start
+
+```go
+package main
+
+import (
+    "context"
+    "github.com/rawbytedev/zerokv/badgerdb"
+)
+
+func main() {
+    db, _ := badgerdb.NewBadgerDB(badgerdb.Config{Dir: "/temp"})
+    defer db.Close()
+    
+    db.Put(context.Background(), []byte("hello"), []byte("world"))
+}
+```
+
+## Implementations
+
+- Badger - High-performance embedded KV
+- Pebble - RocksDB-inspired embedded store
+
+## Creating Your Own
+
+See CONTRIBUTING.md for implementation guidelines.
