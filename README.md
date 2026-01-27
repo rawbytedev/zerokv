@@ -1,7 +1,7 @@
 # KVStore - Minimal Key-Value Abstraction for Go
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/rawbytedev/zerokv)](https://goreportcard.com/report/github.com/rawbytedev/zerokv)
-![Test and Benchmark](https://github.com/rawbytedev/Fractus/actions/workflows/tests.yml/badge.svg)
+![Test and Benchmark](https://github.com/rawbytedev/zerokv/actions/workflows/tests.yml/badge.svg)
 [![Go Reference](https://img.shields.io/badge/godoc-reference-blue.svg)](https://pkg.go.dev/github.com/rawbytedev/zerokv)
 [![GitHub Release](https://img.shields.io/github/v/release/rawbytedev/zerokv)](https://github.com/rawbytedev/zerokv/releases/latest)
 
