@@ -1,102 +1,21 @@
 package badgerdb_test
 
 import (
-	"crypto/rand"
 	"testing"
 
-	"github.com/rawbytedev/zerokv"
-	"github.com/rawbytedev/zerokv/badgerdb"
+	"github.com/rawbytedev/zerokv/helpers"
 	"github.com/stretchr/testify/require"
 )
 
-// setupBadgerDB creates a temporary BadgerDB instance for testing.
-func setupBadgerDB(t *testing.T) zerokv.Core {
-	tmp := t.TempDir()
-	db, err := badgerdb.NewBadgerDB(badgerdb.Config{
-		Dir: tmp,
-	})
-	if err != nil || db == nil {
-		t.Fatalf("Failed to create BadgerDB: %v", err)
-	}
-	return db
-}
-
-// randomBytes generates a slice of random bytes of specified length.
-func randomBytes(n int) []byte {
-	b := make([]byte, n)
-	rand.Read(b)
-	return b
-}
-
-// TestBadgerGetPutDelete tests basic Put, Get, and Delete operations.
-func TestBadgerGetPutDelete(t *testing.T) {
-	db := setupBadgerDB(t)
-	keys := make([][]byte, 10)
-	values := make([][]byte, 10)
-	for i := 0; i < 10; i++ {
-		keys[i] = randomBytes(16)
-		values[i] = randomBytes(32)
-		err := db.Put(t.Context(), keys[i], values[i])
-		if err != nil {
-			t.Fatalf("Failed to put key-value pair: %v", err)
-		}
-	}
-	for i := 0; i < 10; i++ {
-		value, err := db.Get(t.Context(), keys[i])
-		require.NoError(t, err, "Error retrieving value for key")
-		require.Equal(t, values[i], value, "Retrieved value does not match expected")
-		err = db.Delete(t.Context(), keys[i])
-		require.NoError(t, err, "Error deleting key")
-		_, err = db.Get(t.Context(), keys[i])
-		require.Error(t, err, "Expected error retrieving deleted key")
-	}
-	defer db.Close()
-}
-
-// TestBadgerGetNonExistentKey tests retrieval of a non-existent key.
-func TestBadgerGetNonExistentKey(t *testing.T) {
-	db := setupBadgerDB(t)
-	nonExistentKey := randomBytes(16)
-	_, err := db.Get(t.Context(), nonExistentKey)
-	require.Error(t, err, "Expected error when getting non-existent key")
-	defer db.Close()
-}
-
-// TestBadgerOverwriteKey tests overwriting an existing key.
-func TestBadgerOverwriteKey(t *testing.T) {
-	db := setupBadgerDB(t)
-	key := randomBytes(16)
-	value1 := randomBytes(32)
-	value2 := randomBytes(32)
-	err := db.Put(t.Context(), key, value1)
-	require.NoError(t, err, "Error putting first value")
-	retrievedValue, err := db.Get(t.Context(), key)
-	require.NoError(t, err, "Error getting first value")
-	require.Equal(t, value1, retrievedValue, "First retrieved value does not match")
-	err = db.Put(t.Context(), key, value2)
-	require.NoError(t, err, "Error putting second value")
-	retrievedValue, err = db.Get(t.Context(), key)
-	require.NoError(t, err, "Error getting second value")
-	require.Equal(t, value2, retrievedValue, "Second retrieved value does not match")
-	defer db.Close()
-}
-
-// TestBadgerClose tests closing the BadgerDB instance.
-func TestBadgerClose(t *testing.T) {
-	db := setupBadgerDB(t)
-	err := db.Close()
-	require.NoError(t, err, "Error closing BadgerDB")
-}
-
 // TestBadgerBatchOperations tests batch Put and Get operations.
 func TestBadgerBatchOperations(t *testing.T) {
-	db := setupBadgerDB(t)
+	db := helpers.SetupDB(t, "badgerdb")
 	batch := db.Batch()
 	keys := make([][]byte, 5)
 	values := make([][]byte, 5)
 	for i := 0; i < 5; i++ {
-		keys[i] = randomBytes(16)
-		values[i] = randomBytes(32)
+		keys[i] = helpers.RandomBytes(16)
+		values[i] = helpers.RandomBytes(32)
 		err := batch.Put(keys[i], values[i])
 		require.NoError(t, err, "Error adding Put operation to batch")
 	}

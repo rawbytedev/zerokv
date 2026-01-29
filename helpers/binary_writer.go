@@ -1,6 +1,5 @@
 package helpers
 
-type BinaryWriter struct{
+type BinaryWriter struct {
 	buf []byte
 }
-

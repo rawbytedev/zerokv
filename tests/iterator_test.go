@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/rawbytedev/zerokv"
+	"github.com/rawbytedev/zerokv/helpers"
 	"github.com/stretchr/testify/require"
 )
 
@@ -13,8 +14,8 @@ func FillValues(t *testing.T, db zerokv.Core) ([][]byte, [][]byte) {
 	keys := make([][]byte, 10)
 	values := make([][]byte, 10)
 	for i := 0; i < 10; i++ {
-		keys[i] = randomBytes(16)
-		values[i] = randomBytes(32)
+		keys[i] = helpers.RandomBytes(16)
+		values[i] = helpers.RandomBytes(32)
 		pref_key := make([]byte, 0)
 		pref_key = append(pref_key, []byte("pre_")...)
 		pref_key = append(pref_key, keys[i]...)
@@ -25,6 +26,7 @@ func FillValues(t *testing.T, db zerokv.Core) ([][]byte, [][]byte) {
 	}
 	return keys, values
 }
+
 func TestZeroKvIterator(t *testing.T) {
 	dbs := []string{"pebbledb", "badgerdb"}
 	list_test := []test{
@@ -50,7 +52,7 @@ func TestZeroKvIterator(t *testing.T) {
 }
 
 func testIterateValues(t *testing.T, name string) {
-	db := setupDB(t, name)
+	db := helpers.SetupDB(t, name)
 	_, _ = FillValues(t, db)
 	it := db.Scan([]byte("pre_"))
 	for range 10 {
@@ -62,7 +64,7 @@ func testIterateValues(t *testing.T, name string) {
 }
 
 func testIterateHasKey(t *testing.T, name string) {
-	db := setupDB(t, name)
+	db := helpers.SetupDB(t, name)
 	keys, _ := FillValues(t, db)
 	it := db.Scan([]byte("pre_"))
 	for range 10 {

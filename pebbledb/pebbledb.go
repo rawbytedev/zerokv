@@ -142,7 +142,7 @@ func (it *pebbleIteractor) Error() error {
 	return it.err[len(it.err)-1] // returns the most recent error
 }
 
-//  --- specials methods to use with an instance of badgerdb for some other operations
+// --- specials methods to use with an instance of badgerdb for some other operations
 func NewIterator(p *pebbleDB) zerokv.Iterator {
 	it, err := p.db.NewIter(&pebble.IterOptions{})
 
