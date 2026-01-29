@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type tests struct {
+type test struct {
 	name string
 	fn   func(t *testing.T, name string)
 }
@@ -26,7 +26,7 @@ func setupDB(t *testing.T, name string) zerokv.Core {
 			Dir: tmp,
 		})
 	} else {
-		db, err = pebbledb.NewPebbledb(pebbledb.Config{
+		db, err = pebbledb.NewPebbleDB(pebbledb.Config{
 			Dir: tmp,
 		})
 	}
@@ -44,8 +44,8 @@ func randomBytes(n int) []byte {
 }
 func TestZeroKvImplementation(t *testing.T) {
 	dbs := []string{"badgerdb", "pebbledb"}
-	test := []tests{
-		{name: "TestGetPutDeleteBadgerdb",
+	list_test := []test{
+		{name: "TestGetPutDelete",
 			fn: func(t *testing.T, name string) {
 				testGetPutDelete(t, name)
 			}}, {
@@ -65,10 +65,10 @@ func TestZeroKvImplementation(t *testing.T) {
 	}
 
 	for i := range dbs {
-		for tt := range test {
-			testname := fmt.Sprintf("%s%s", test[tt].name, dbs[i])
+		for tt := range list_test {
+			testname := fmt.Sprintf("%s%s", list_test[tt].name, dbs[i])
 			t.Run(testname, func(t *testing.T) {
-				test[tt].fn(t, dbs[i])
+				list_test[tt].fn(t, dbs[i])
 			})
 		}
 	}

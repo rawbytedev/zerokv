@@ -8,18 +8,21 @@ import (
 	"github.com/rawbytedev/zerokv"
 )
 
-// pebbledb manages Database Insert/Deletion/Batch Operations for Pebble.
-// It only handles []byte keys and values.
-type pebbledb struct {
+type pebbleDB struct {
 	db *pebble.DB
 }
 type pebbleBatch struct {
 	batch *pebble.Batch
 }
+type pebbleIteractor struct {
+	iteractor *pebble.Iterator
+	started   bool
+	valid     bool
+	err       []error
+}
 
-// NewPebbledb creates a new PebbleDB instance with the given config.
-// Returns a StorageDB interface or an error if initialization fails.
-func NewPebbledb(cfg Config) (zerokv.Core, error) {
+// NewPebbleDB initializes and returns a zerokv.Core instance at the specified path(pebbleDB).
+func NewPebbleDB(cfg Config) (zerokv.Core, error) {
 	opts := &pebble.Options{}
 	if cfg.PebbleConfigs != nil {
 		opts = cfg.PebbleConfigs
@@ -30,16 +33,18 @@ func NewPebbledb(cfg Config) (zerokv.Core, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &pebbledb{db: db}, nil
+	return &pebbleDB{db: db}, nil
 }
 
+// --- Basic CRUD operations ---
+
 // Put inserts or updates a key-value pair in the database.
-func (p *pebbledb) Put(ctx context.Context, key []byte, data []byte) error {
+func (p *pebbleDB) Put(ctx context.Context, key []byte, data []byte) error {
 	return p.db.Set(key, data, pebble.Sync)
 }
 
 // Get retrieves the value for a given key. Returns an error if not found.
-func (p *pebbledb) Get(ctx context.Context, key []byte) ([]byte, error) {
+func (p *pebbleDB) Get(ctx context.Context, key []byte) ([]byte, error) {
 	val, closer, err := p.db.Get(key)
 	if err != nil {
 		return nil, err
@@ -49,12 +54,12 @@ func (p *pebbledb) Get(ctx context.Context, key []byte) ([]byte, error) {
 }
 
 // Del deletes a key-value pair from the database.
-func (p *pebbledb) Delete(ctx context.Context, key []byte) error {
+func (p *pebbleDB) Delete(ctx context.Context, key []byte) error {
 	return p.db.Delete(key, pebble.Sync)
 }
 
 // Close closes the database and releases all resources.
-func (p *pebbledb) Close() error {
+func (p *pebbleDB) Close() error {
 	var errs []error
 	if err := p.db.Close(); err != nil {
 		errs = append(errs, err)
@@ -65,8 +70,10 @@ func (p *pebbledb) Close() error {
 	return errors.Join(errs...)
 }
 
-func (b *pebbledb) Batch() zerokv.Batch {
-	return &pebbleBatch{batch: b.db.NewBatch()}
+// -- Batch operations
+
+func (p *pebbleDB) Batch() zerokv.Batch {
+	return &pebbleBatch{batch: p.db.NewBatch()}
 }
 
 func (p *pebbleBatch) Put(key []byte, data []byte) error {
@@ -83,20 +90,91 @@ func (p *pebbleBatch) Commit(ctx context.Context) error {
 	return p.batch.Commit(pebble.Sync)
 }
 
-func (b *pebbledb) Scan(prefix []byte) zerokv.Iterator {
-	// Placeholder for Scan operation implementation
-	return nil
+// -- Iterator operations
+
+func (p *pebbleDB) Scan(prefix []byte) zerokv.Iterator {
+	upbound := make([]byte, len(prefix))
+	copy(upbound, prefix)
+	upbound[len(upbound)-1]++
+	it, err := p.db.NewIter(&pebble.IterOptions{
+		LowerBound: prefix,
+		UpperBound: upbound,
+	})
+	if err != nil {
+		return nil
+	}
+	return &pebbleIteractor{iteractor: it, valid: false, started: false}
 }
-func (b *pebbledb) NewIterator() zerokv.Iterator {
-	// Placeholder for Iterator implementation
-	return nil
+
+func (it *pebbleIteractor) Next() bool {
+	// this comes from how iterators works in pebble
+	if !it.started {
+		it.valid = it.iteractor.First()
+		it.started = true
+	} else {
+		it.valid = it.iteractor.Next()
+	}
+	return it.valid
 }
-func NewReverseIterator() zerokv.Iterator {
-	// Placeholder for Reverse Iterator implementation
-	return nil
+
+func (it *pebbleIteractor) Key() []byte {
+	if !it.valid {
+		return nil
+	}
+	return it.iteractor.Key() // safer, doesn't make changes to key
 }
-func NewPrefixIterator(prefix []byte) zerokv.Iterator {
-	// Placeholder for Prefix Iterator implementation
+func (it *pebbleIteractor) Value() []byte {
+	if !it.valid {
+		return nil
+	}
+	data, err := it.iteractor.ValueAndErr()
+	if err != nil {
+		it.err = append(it.err, err)
+		return nil
+	}
+	return data
+}
+func (it *pebbleIteractor) Release() {
+	it.valid = false
+	it.iteractor.Close()
+}
+func (it *pebbleIteractor) Error() error {
+	return it.err[len(it.err)-1] // returns the most recent error
+}
+
+//  --- specials methods to use with an instance of badgerdb for some other operations
+func NewIterator(p *pebbleDB) zerokv.Iterator {
+	it, err := p.db.NewIter(&pebble.IterOptions{})
+
+	if err != nil {
+		return nil
+	}
+	return &pebbleIteractor{iteractor: it, valid: false, started: false}
+}
+
+func NewPrefixIterator(p *pebbleDB, prefix []byte) zerokv.Iterator {
+	upbound := make([]byte, len(prefix))
+	copy(upbound, prefix)
+	upbound[len(upbound)-1]++
+	it, err := p.db.NewIter(&pebble.IterOptions{
+		LowerBound: prefix,
+		UpperBound: upbound,
+	})
+	if err != nil {
+		return nil
+	}
+	return &pebbleIteractor{iteractor: it, valid: false, started: false}
+}
+
+/*
+Due to how pebble works reverse Iterators have to be built using a different struct mainly because
+we need to make use
+it.Prev()
+it.Last()
+in Next()
+*/
+
+func NewReverseIterator(p *pebbleDB, prefix []byte) zerokv.Iterator {
 	return nil
 }
 func NewReversePrefixIterator(prefix []byte) zerokv.Iterator {

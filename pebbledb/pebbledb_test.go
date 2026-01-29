@@ -13,7 +13,7 @@ import (
 // setupPebbleDB creates a temporary PebbleDB instance for testing.
 func setupPebbleDB(t *testing.T) zerokv.Core {
 	tmp := t.TempDir()
-	db, err := pebbledb.NewPebbledb(pebbledb.Config{
+	db, err := pebbledb.NewPebbleDB(pebbledb.Config{
 		Dir: tmp,
 	})
 	if err != nil || db == nil {
