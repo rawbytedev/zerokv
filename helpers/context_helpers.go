@@ -2,6 +2,7 @@ package helpers
 
 import "context"
 
+// IgnoreContext runs the provided function while respecting the context's cancellation.
 func IgnoreContext(ctx context.Context, fn func() error) error {
 	if err := ctx.Err(); err != nil {
 		return err
@@ -14,6 +15,7 @@ type result struct {
 	err  error
 }
 
+// RunWithContext runs the provided function while respecting the context's cancellation.
 func RunWithContext(ctx context.Context, fn func() ([]byte, error)) ([]byte, error) {
 	done := make(chan result, 1)
 	go func() {

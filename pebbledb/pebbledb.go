@@ -14,11 +14,11 @@ type pebbleDB struct {
 type pebbleBatch struct {
 	batch *pebble.Batch
 }
-type pebbleIteractor struct {
-	iteractor *pebble.Iterator
-	started   bool
-	valid     bool
-	err       []error
+type pebbleIterator struct {
+	Iterator *pebble.Iterator
+	started  bool
+	valid    bool
+	err      []error
 }
 
 // NewPebbleDB initializes and returns a zerokv.Core instance at the specified path(pebbleDB).
@@ -40,11 +40,17 @@ func NewPebbleDB(cfg Config) (zerokv.Core, error) {
 
 // Put inserts or updates a key-value pair in the database.
 func (p *pebbleDB) Put(ctx context.Context, key []byte, data []byte) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	return p.db.Set(key, data, pebble.Sync)
 }
 
 // Get retrieves the value for a given key. Returns an error if not found.
 func (p *pebbleDB) Get(ctx context.Context, key []byte) ([]byte, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 	val, closer, err := p.db.Get(key)
 	if err != nil {
 		return nil, err
@@ -55,6 +61,9 @@ func (p *pebbleDB) Get(ctx context.Context, key []byte) ([]byte, error) {
 
 // Del deletes a key-value pair from the database.
 func (p *pebbleDB) Delete(ctx context.Context, key []byte) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	return p.db.Delete(key, pebble.Sync)
 }
 
@@ -103,42 +112,45 @@ func (p *pebbleDB) Scan(prefix []byte) zerokv.Iterator {
 	if err != nil {
 		return nil
 	}
-	return &pebbleIteractor{iteractor: it, valid: false, started: false}
+	return &pebbleIterator{Iterator: it, valid: false, started: false}
 }
 
-func (it *pebbleIteractor) Next() bool {
+func (it *pebbleIterator) Next() bool {
 	// this comes from how iterators works in pebble
 	if !it.started {
-		it.valid = it.iteractor.First()
+		it.valid = it.Iterator.First()
 		it.started = true
 	} else {
-		it.valid = it.iteractor.Next()
+		it.valid = it.Iterator.Next()
 	}
 	return it.valid
 }
 
-func (it *pebbleIteractor) Key() []byte {
+func (it *pebbleIterator) Key() []byte {
 	if !it.valid {
 		return nil
 	}
-	return it.iteractor.Key() // safer, doesn't make changes to key
+	return it.Iterator.Key() // safer, doesn't make changes to key
 }
-func (it *pebbleIteractor) Value() []byte {
+func (it *pebbleIterator) Value() []byte {
 	if !it.valid {
 		return nil
 	}
-	data, err := it.iteractor.ValueAndErr()
+	data, err := it.Iterator.ValueAndErr()
 	if err != nil {
 		it.err = append(it.err, err)
 		return nil
 	}
 	return data
 }
-func (it *pebbleIteractor) Release() {
+func (it *pebbleIterator) Release() {
 	it.valid = false
-	it.iteractor.Close()
+	it.Iterator.Close()
 }
-func (it *pebbleIteractor) Error() error {
+func (it *pebbleIterator) Error() error {
+	if len(it.err) == 0 {
+		return nil
+	}
 	return it.err[len(it.err)-1] // returns the most recent error
 }
 
@@ -149,7 +161,7 @@ func NewIterator(p *pebbleDB) zerokv.Iterator {
 	if err != nil {
 		return nil
 	}
-	return &pebbleIteractor{iteractor: it, valid: false, started: false}
+	return &pebbleIterator{Iterator: it, valid: false, started: false}
 }
 
 func NewPrefixIterator(p *pebbleDB, prefix []byte) zerokv.Iterator {
@@ -163,7 +175,7 @@ func NewPrefixIterator(p *pebbleDB, prefix []byte) zerokv.Iterator {
 	if err != nil {
 		return nil
 	}
-	return &pebbleIteractor{iteractor: it, valid: false, started: false}
+	return &pebbleIterator{Iterator: it, valid: false, started: false}
 }
 
 /*

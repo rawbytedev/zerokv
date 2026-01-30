@@ -8,6 +8,7 @@ import (
 type Config struct {
 	Dir           string
 	PebbleConfigs *pebble.Options
+	
 }
 
 func DefaultOptions(Dir string) *Config {

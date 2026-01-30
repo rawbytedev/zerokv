@@ -16,11 +16,11 @@ type badgerBatch struct {
 	batch *badger.WriteBatch
 }
 
-type badgerIteractor struct {
-	iteractor *badger.Iterator
-	started   bool
-	valid     bool
-	err       []error
+type badgerIterator struct {
+	Iterator *badger.Iterator
+	started  bool
+	valid    bool
+	err      []error
 }
 
 // NewBadgerDB initializes and returns a zerokv.Core instance at the specified path(badgerDB).
@@ -42,6 +42,9 @@ func NewBadgerDB(cfg Config) (zerokv.Core, error) {
 
 // Put inserts or updates a key-value pair in the database.
 func (b *badgerDB) Put(ctx context.Context, key, value []byte) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	return b.db.Update(func(txn *badger.Txn) error {
 		return txn.Set(key, value)
 	})
@@ -59,7 +62,8 @@ func (b *badgerDB) Get(ctx context.Context, key []byte) ([]byte, error) {
 			return err
 		}
 		return item.Value(func(val []byte) error {
-			data = append([]byte{}, val...)
+			data = make([]byte, len(val))
+			copy(data, val)
 			return nil
 		})
 	})
@@ -120,41 +124,47 @@ func (b *badgerBatch) Commit(ctx context.Context) error {
 func (b *badgerDB) Scan(prefix []byte) zerokv.Iterator {
 	txn := b.db.NewTransaction(false)
 	it := txn.NewIterator(badger.IteratorOptions{Prefix: prefix, PrefetchValues: true})
-	return &badgerIteractor{iteractor: it}
+	return &badgerIterator{Iterator: it}
 }
-func (it *badgerIteractor) Next() bool {
+func (it *badgerIterator) Next() bool {
 	if !it.started {
-		it.iteractor.Rewind()
+		it.Iterator.Rewind()
 		it.started = true
 	} else {
-		it.iteractor.Next()
+		it.Iterator.Next()
 	}
-	it.valid = it.iteractor.Valid()
+	it.valid = it.Iterator.Valid()
 	return it.valid
 }
 
-func (it *badgerIteractor) Key() []byte {
+func (it *badgerIterator) Key() []byte {
 	if !it.valid {
 		return nil
 	}
-	return it.iteractor.Item().KeyCopy(nil) // safer, doesn't make changes to key
+	return it.Iterator.Item().KeyCopy(nil) // safer, doesn't make changes to key
 }
-func (it *badgerIteractor) Value() []byte {
+func (it *badgerIterator) Value() []byte {
 	if !it.valid {
 		return nil
 	}
-	data, err := it.iteractor.Item().ValueCopy(nil)
+	data, err := it.Iterator.Item().ValueCopy(nil)
 	if err != nil {
 		it.err = append(it.err, err)
 		return []byte{}
 	}
 	return data
 }
-func (it *badgerIteractor) Release() {
-	it.iteractor.Close()
+
+// Release Must be called to avoid memory leaks
+func (it *badgerIterator) Release() {
+	it.Iterator.Close()
 }
-func (it *badgerIteractor) Error() error {
-	return it.err[len(it.err)-1] // returns the most recent error
+
+func (it *badgerIterator) Error() error {
+	if len(it.err) == 0 {
+		return nil
+	}
+	return it.err[len(it.err)-1]
 }
 
 //  --- specials methods to use with an instance of badgerdb for some other operations
@@ -165,7 +175,7 @@ func NewIterator(b *badgerDB) zerokv.Iterator {
 		it = txn.NewIterator(badger.IteratorOptions{})
 		return nil
 	})
-	return &badgerIteractor{iteractor: it}
+	return &badgerIterator{Iterator: it}
 }
 func NewReverseIterator(b *badgerDB) zerokv.Iterator {
 	it := &badger.Iterator{}
@@ -173,7 +183,7 @@ func NewReverseIterator(b *badgerDB) zerokv.Iterator {
 		it = txn.NewIterator(badger.IteratorOptions{Reverse: true})
 		return nil
 	})
-	return &badgerIteractor{iteractor: it}
+	return &badgerIterator{Iterator: it}
 }
 func NewPrefixIterator(b *badgerDB, prefix []byte) zerokv.Iterator {
 	it := &badger.Iterator{}
@@ -181,7 +191,7 @@ func NewPrefixIterator(b *badgerDB, prefix []byte) zerokv.Iterator {
 		it = txn.NewIterator(badger.IteratorOptions{Prefix: prefix})
 		return nil
 	})
-	return &badgerIteractor{iteractor: it}
+	return &badgerIterator{Iterator: it}
 }
 func NewReversePrefixIterator(b *badgerDB, prefix []byte) zerokv.Iterator {
 	it := &badger.Iterator{}
@@ -189,5 +199,5 @@ func NewReversePrefixIterator(b *badgerDB, prefix []byte) zerokv.Iterator {
 		it = txn.NewIterator(badger.IteratorOptions{Prefix: prefix, Reverse: true})
 		return nil
 	})
-	return &badgerIteractor{iteractor: it}
+	return &badgerIterator{Iterator: it}
 }

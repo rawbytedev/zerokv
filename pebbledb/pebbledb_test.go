@@ -26,6 +26,7 @@ func TestPebbleBatchOperations(t *testing.T) {
 		require.NoError(t, err, "Error getting value after batch commit")
 		require.Equal(t, values[i], retrievedValue, "Retrieved value does not match expected after batch commit")
 	}
+	// Attempting to use the batch after commit should result in panic this behavior is specific to PebbleDB
 	// This should fail because the batch has already been committed
 	require.Panics(t, func() {
 		batch.Put(keys[0], values[1])

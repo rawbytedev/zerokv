@@ -5,7 +5,7 @@ import "context"
 type Core interface {
 	// Put inserts or updates a key-value pair in the database.
 	Put(ctx context.Context, key []byte, data []byte) error
-	// Get retrieves the value for a given key. Returns an error if not found.
+	// Get retrieves the value for a given key.
 	Get(ctx context.Context, key []byte) ([]byte, error)
 	// Del deletes a key-value pair from the database.
 	Delete(ctx context.Context, key []byte) error

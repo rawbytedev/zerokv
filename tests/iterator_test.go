@@ -59,6 +59,7 @@ func testIterateValues(t *testing.T, name string) {
 		require.True(t, it.Next())
 		require.Equal(t, it.Key()[:len("pre_")], []byte("pre_"))
 	}
+	require.False(t, it.Next())
 	defer db.Close()
 	defer it.Release()
 }
@@ -79,6 +80,7 @@ func testIterateHasKey(t *testing.T, name string) {
 		}
 		require.True(t, cond)
 	}
+	require.False(t, it.Next())
 	defer db.Close()
 	defer it.Release()
 }
