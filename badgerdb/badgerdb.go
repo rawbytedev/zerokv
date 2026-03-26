@@ -179,6 +179,7 @@ func NewPrefixIterator(b *BadgerDB, prefix []byte) zerokv.Iterator {
 	it := txn.NewIterator(badger.IteratorOptions{Prefix: prefix, PrefetchValues: true})
 	return &badgerIterator{Iterator: it}
 }
+
 type badgerReverseIterator struct {
 	Iterator *badger.Iterator
 	started  bool
