@@ -14,7 +14,7 @@ type test struct {
 }
 
 func TestZeroKvImplementation(t *testing.T) {
-	dbs := []string{"badgerdb", "pebbledb"}
+	dbs := []string{"badgerdb", "pebbledb", "memdb"}
 	list_test := []test{
 		{name: "TestGetPutDelete",
 			fn: func(t *testing.T, name string) {

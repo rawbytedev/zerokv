@@ -6,6 +6,7 @@ import (
 
 	"github.com/rawbytedev/zerokv"
 	"github.com/rawbytedev/zerokv/badgerdb"
+	"github.com/rawbytedev/zerokv/memdb"
 	"github.com/rawbytedev/zerokv/pebbledb"
 )
 
@@ -14,14 +15,17 @@ func SetupDB(t *testing.T, name string) zerokv.Core {
 	tmp := t.TempDir()
 	var db zerokv.Core
 	var err error
-	if name == "badgerdb" {
+	switch name {
+	case "badgerdb":
 		db, err = badgerdb.NewBadgerDB(badgerdb.Config{
 			Dir: tmp,
 		})
-	} else {
+	case "pebbledb":
 		db, err = pebbledb.NewPebbleDB(pebbledb.Config{
 			Dir: tmp,
 		})
+	case "memdb":
+		db, err = memdb.NewMemDataBase(memdb.Config{})
 	}
 	if err != nil || db == nil {
 		t.Fatalf("Failed to create %s: %v", name, err)

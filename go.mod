@@ -8,6 +8,7 @@ require (
 )
 
 require (
+	github.com/AmirSoleimani/MemoryDB v0.0.0-20181011115717-92bb04995ac9
 	github.com/DataDog/zstd v1.4.5 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cockroachdb/errors v1.11.3 // indirect
