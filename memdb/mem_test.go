@@ -1,9 +1,9 @@
 package memdb_test
 
 import (
-	"testing"
 	"github.com/rawbytedev/zerokv/helpers"
 	"github.com/stretchr/testify/require"
+	"testing"
 )
 
 // TestMemdbBatchOperations tests batch Put and Get operations.
@@ -27,5 +27,3 @@ func TestMemdbBatchOperations(t *testing.T) {
 	}
 	defer db.Close()
 }
-
-
