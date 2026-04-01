@@ -95,6 +95,7 @@ db.Put(ctx, []byte("key"), []byte("value"))
 | ---------- | ---------- | ---------- |
 | **BadgerDB** | High-performance LSM tree | Write-heavy workloads, strong consistency |
 | **PebbleDB** | RocksDB-compatible, flexible | Read-heavy workloads, compatibility needs |
+| **MemDB** | In-memory, fast | Testing, caching, development (no Scan support) |
 
 ### Custom Implementations
 

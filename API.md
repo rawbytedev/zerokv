@@ -179,6 +179,9 @@ Returns an iterator for keys with the given prefix.
 
 ```go
 iter := db.Scan([]byte("user:"))
+if iter == nil {
+    log.Fatal("Scanning not supported by this backend")
+}
 defer iter.Release()
 for iter.Next() {
     key := iter.Key()
@@ -195,6 +198,8 @@ if iter.Error() != nil {
 - Prefix matching is lexicographic
 - Empty prefix matches all keys
 - Must call `Release()` on the returned iterator
+- May return `nil` if the backend doesn't support scanning (e.g., MemDB)
+- Always check if iterator is `nil` before use
 - See `Iterator` interface for details
 
 #### Close

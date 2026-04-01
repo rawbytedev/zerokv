@@ -3,7 +3,7 @@ package memdb
 import (
 	"context"
 
-	"github.com/AmirSoleimani/MemoryDB/memdb"
+	db "github.com/AmirSoleimani/MemoryDB/memdb"
 	"github.com/rawbytedev/zerokv"
 )
 
@@ -77,6 +77,7 @@ func (m *MemBatch) Commit(ctx context.Context) error {
 	return m.batch.Write()
 }
 func (m *MemDB) Scan(value []byte) zerokv.Iterator {
-	// This is a placeholder implementation. You would need to implement the actual scanning logic based on your MemDB's capabilities.
+	// MemDB does not support range scanning/iteration
+	// Returns nil to indicate this operation is not supported
 	return nil
 }
