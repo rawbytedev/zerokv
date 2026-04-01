@@ -6,6 +6,7 @@ import (
 
 	"github.com/rawbytedev/zerokv"
 	"github.com/rawbytedev/zerokv/badgerdb"
+	"github.com/rawbytedev/zerokv/encoders"
 	"github.com/rawbytedev/zerokv/memdb"
 	"github.com/rawbytedev/zerokv/pebbledb"
 )
@@ -31,6 +32,19 @@ func SetupDB(t *testing.T, name string) zerokv.Core {
 		t.Fatalf("Failed to create %s: %v", name, err)
 	}
 	return db
+}
+
+func SetupEncoders(t *testing.T, name string) encoders.Encoder {
+	switch name {
+	case "json":
+		return encoders.NewJsonEncoder()
+	case "rlp":
+		return encoders.NewRLPEncoder()
+	case "yaml":
+		return encoders.NewYamlEncoder()
+	}
+	t.Fatalf("Failed to create %s encoder", name)
+	return nil
 }
 
 // randomBytes generates a slice of random bytes of specified length.
