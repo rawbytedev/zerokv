@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZeroKV — Interactive Demo</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --bg2: #161b22;
+    --bg3: #21262d;
+    --border: #30363d;
+    --text: #e6edf3;
+    --muted: #8b949e;
+    --green: #3fb950;
+    --blue: #58a6ff;
+    --orange: #f0883e;
+    --red: #f85149;
+    --purple: #bc8cff;
+    --yellow: #d29922;
+    --teal: #39d353;
+    --glow-green: rgba(63,185,80,0.15);
+    --glow-blue: rgba(88,166,255,0.15);
+    --glow-orange: rgba(240,136,62,0.15);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; font-size: 14px; }
+
+  /* Layout */
+  .app { display: grid; grid-template-rows: auto 1fr; height: 100vh; overflow: hidden; }
+  .main { display: grid; grid-template-columns: 320px 1fr 300px; gap: 0; overflow: hidden; }
+
+  /* Header */
+  header {
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .logo { display: flex; align-items: center; gap: 10px; }
+  .logo svg { width: 28px; height: 28px; }
+  .logo-text { font-size: 18px; font-weight: 700; color: var(--text); letter-spacing: -0.3px; }
+  .logo-badge { font-size: 10px; background: var(--green); color: #000; border-radius: 3px; padding: 1px 5px; font-weight: 700; }
+  .tagline { color: var(--muted); font-size: 12px; border-left: 1px solid var(--border); padding-left: 16px; }
+  .backend-pill {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 6px 14px;
+  }
+  .backend-pill .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); box-shadow: 0 0 6px var(--green); animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+  .backend-pill .label { font-size: 12px; font-weight: 600; color: var(--text); }
+
+  /* Left panel */
+  .panel-left {
+    background: var(--bg2);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* Section headers */
+  .section-header {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  /* Backend selector */
+  .backend-list { padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+  .backend-card {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+    background: var(--bg3);
+  }
+  .backend-card:hover { border-color: var(--blue); background: rgba(88,166,255,0.05); }
+  .backend-card.active.memdb { border-color: var(--purple); background: rgba(188,140,255,0.1); }
+  .backend-card.active.badgerdb { border-color: var(--orange); background: rgba(240,136,62,0.1); }
+  .backend-card.active.pebbledb { border-color: var(--blue); background: rgba(88,166,255,0.1); }
+  .backend-name { font-weight: 700; font-size: 13px; margin-bottom: 4px; display: flex; align-items: center; gap: 8px; }
+  .backend-name .icon { font-size: 16px; }
+  .backend-desc { font-size: 11px; color: var(--muted); line-height: 1.5; }
+  .backend-tag { font-size: 10px; padding: 2px 6px; border-radius: 3px; font-weight: 600; margin-left: auto; }
+  .tag-memory { background: rgba(188,140,255,0.2); color: var(--purple); }
+  .tag-disk { background: rgba(240,136,62,0.2); color: var(--orange); }
+  .tag-rocks { background: rgba(88,166,255,0.2); color: var(--blue); }
+
+  /* Features list */
+  .features { padding: 12px 16px; border-top: 1px solid var(--border); flex: 1; overflow-y: auto; }
+  .feature-item { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 10px; font-size: 12px; color: var(--muted); line-height: 1.5; }
+  .feature-item .check { color: var(--green); font-size: 13px; flex-shrink: 0; margin-top: 1px; }
+
+  /* Main center panel */
+  .panel-main {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: var(--bg);
+  }
+
+  /* Op tabs */
+  .op-tabs { display: flex; border-bottom: 1px solid var(--border); background: var(--bg2); }
+  .op-tab {
+    padding: 12px 20px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--muted);
+    border-bottom: 2px solid transparent;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .op-tab:hover { color: var(--text); }
+  .op-tab.active { color: var(--blue); border-bottom-color: var(--blue); }
+  .op-tab .tab-badge { font-size: 10px; background: var(--bg3); border-radius: 3px; padding: 1px 5px; }
+
+  /* Operation forms */
+  .op-panel { flex: 0 0 auto; padding: 20px; border-bottom: 1px solid var(--border); }
+  .op-content { display: none; }
+  .op-content.active { display: block; }
+  .field-row { display: flex; gap: 10px; margin-bottom: 12px; align-items: flex-start; }
+  .field { display: flex; flex-direction: column; gap: 4px; flex: 1; }
+  label { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+  input, textarea {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: 'Fira Code', monospace;
+    font-size: 13px;
+    padding: 8px 12px;
+    width: 100%;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  input:focus, textarea:focus { border-color: var(--blue); }
+  textarea { resize: vertical; min-height: 70px; }
+  .btn {
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 9px 18px;
+    transition: all 0.15s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+  }
+  .btn-primary { background: var(--blue); color: #000; }
+  .btn-primary:hover { background: #79b8ff; }
+  .btn-green { background: var(--green); color: #000; }
+  .btn-green:hover { background: #56d364; }
+  .btn-red { background: var(--red); color: #fff; }
+  .btn-red:hover { background: #ff6b6b; }
+  .btn-orange { background: var(--orange); color: #000; }
+  .btn-orange:hover { opacity: 0.85; }
+  .btn-sm { padding: 5px 12px; font-size: 12px; }
+
+  .result-box {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 12px 14px;
+    font-family: 'Fira Code', monospace;
+    font-size: 12px;
+    min-height: 44px;
+    transition: all 0.2s;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+  .result-box.ok { border-color: var(--green); background: var(--glow-green); color: var(--green); }
+  .result-box.err { border-color: var(--red); background: rgba(248,81,73,0.1); color: var(--red); }
+
+  /* DB View */
+  .db-view { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
+  .db-toolbar { display: flex; align-items: center; gap: 10px; padding: 10px 20px; border-bottom: 1px solid var(--border); background: var(--bg2); }
+  .db-toolbar input { flex: 1; padding: 6px 10px; font-size: 12px; }
+  .db-count { font-size: 11px; color: var(--muted); white-space: nowrap; }
+  .db-entries { flex: 1; overflow-y: auto; padding: 0; }
+  .db-row {
+    display: grid;
+    grid-template-columns: 180px 1fr 80px 28px;
+    gap: 0;
+    padding: 8px 20px;
+    border-bottom: 1px solid rgba(48,54,61,0.5);
+    align-items: center;
+    transition: background 0.1s;
+    font-family: 'Fira Code', monospace;
+    font-size: 12px;
+  }
+  .db-row:hover { background: var(--bg2); }
+  .db-row.highlight { animation: rowflash 1s ease-out; }
+  @keyframes rowflash { 0%{background:rgba(63,185,80,0.3)} 100%{background:transparent} }
+  .db-row.deleted { animation: rowdelete 0.4s ease-out forwards; }
+  @keyframes rowdelete { 0%{background:rgba(248,81,73,0.3);opacity:1} 100%{background:transparent;opacity:0;height:0;padding:0} }
+  .db-key { color: var(--blue); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
+  .db-key:hover { text-decoration: underline; }
+  .db-val { color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0 12px; }
+  .db-ts { color: var(--muted); font-size: 10px; text-align: right; }
+  .db-del-btn { width: 22px; height: 22px; border-radius: 4px; background: transparent; border: none; cursor: pointer; color: var(--muted); font-size: 14px; display: flex; align-items: center; justify-content: center; transition: all 0.1s; }
+  .db-del-btn:hover { background: rgba(248,81,73,0.2); color: var(--red); }
+  .db-header {
+    display: grid;
+    grid-template-columns: 180px 1fr 80px 28px;
+    gap: 0;
+    padding: 6px 20px;
+    border-bottom: 1px solid var(--border);
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--muted);
+    background: var(--bg2);
+    position: sticky;
+    top: 0;
+  }
+  .empty-state { text-align: center; padding: 60px 20px; color: var(--muted); }
+  .empty-state .icon { font-size: 40px; margin-bottom: 12px; }
+  .empty-state p { font-size: 13px; }
+
+  /* Batch panel */
+  .batch-ops { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+  .batch-op-row { display: flex; gap: 8px; align-items: center; }
+  .batch-op-type { background: var(--bg3); border: 1px solid var(--border); border-radius: 4px; color: var(--text); padding: 6px 8px; font-size: 12px; font-weight: 600; cursor: pointer; }
+
+  /* Right panel - Activity Log */
+  .panel-right {
+    background: var(--bg2);
+    border-left: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .log-list { flex: 1; overflow-y: auto; padding: 8px 0; }
+  .log-item { padding: 8px 14px; border-bottom: 1px solid rgba(48,54,61,0.4); font-size: 11px; font-family: 'Fira Code', monospace; animation: fadein 0.3s; }
+  @keyframes fadein { from{opacity:0;transform:translateY(-4px)} to{opacity:1;transform:none} }
+  .log-ts { color: var(--muted); font-size: 10px; margin-bottom: 2px; }
+  .log-op { font-weight: 700; font-size: 10px; padding: 1px 5px; border-radius: 3px; margin-right: 6px; }
+  .log-op.PUT { background: rgba(63,185,80,0.2); color: var(--green); }
+  .log-op.GET { background: rgba(88,166,255,0.2); color: var(--blue); }
+  .log-op.DEL { background: rgba(248,81,73,0.2); color: var(--red); }
+  .log-op.SCAN { background: rgba(240,136,62,0.2); color: var(--orange); }
+  .log-op.BATCH { background: rgba(188,140,255,0.2); color: var(--purple); }
+  .log-op.SW { background: rgba(57,211,83,0.2); color: var(--teal); }
+  .log-key { color: var(--blue); }
+  .log-val { color: var(--muted); }
+  .log-status-ok { color: var(--green); }
+  .log-status-err { color: var(--red); }
+  .log-backend { font-size: 9px; background: var(--bg3); padding: 1px 4px; border-radius: 2px; color: var(--muted); margin-left: 4px; }
+
+  /* Stats bar */
+  .stats-bar { display: flex; gap: 0; border-top: 1px solid var(--border); }
+  .stat { flex: 1; padding: 8px 10px; text-align: center; border-right: 1px solid var(--border); }
+  .stat:last-child { border-right: none; }
+  .stat-val { font-size: 16px; font-weight: 700; color: var(--text); }
+  .stat-label { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+
+  /* Batch special */
+  #batch-items { display: flex; flex-direction: column; gap: 6px; }
+  .batch-row { display: flex; gap: 8px; align-items: center; }
+  .batch-row select { background: var(--bg3); border: 1px solid var(--border); color: var(--text); border-radius: 4px; padding: 6px 8px; font-size: 12px; font-weight: 600; }
+  .batch-row input { font-size: 12px; padding: 6px 10px; }
+  .batch-row .btn { padding: 5px 8px; font-size: 13px; background: transparent; border: 1px solid var(--border); color: var(--muted); }
+  .batch-row .btn:hover { color: var(--red); border-color: var(--red); background: rgba(248,81,73,0.1); }
+
+  /* Scrollbars */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+  .scan-results { margin-top: 12px; display: flex; flex-direction: column; gap: 4px; max-height: 200px; overflow-y: auto; }
+  .scan-row { display: flex; gap: 8px; font-family: 'Fira Code', monospace; font-size: 12px; padding: 5px 10px; background: var(--bg2); border-radius: 4px; border: 1px solid var(--border); }
+  .scan-row .sk { color: var(--blue); font-weight: 600; }
+  .scan-row .sv { color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header>
+    <div class="logo">
+      <svg viewBox="0 0 32 32" fill="none">
+        <rect width="32" height="32" rx="8" fill="#161b22"/>
+        <rect x="6" y="10" width="20" height="3" rx="1.5" fill="#58a6ff"/>
+        <rect x="6" y="14.5" width="14" height="3" rx="1.5" fill="#3fb950"/>
+        <rect x="6" y="19" width="17" height="3" rx="1.5" fill="#f0883e"/>
+      </svg>
+      <span class="logo-text">ZeroKV</span>
+      <span class="logo-badge">LIVE</span>
+    </div>
+    <span class="tagline">Zero-overhead key-value store abstraction for Go</span>
+    <div class="backend-pill" id="active-backend-pill">
+      <div class="dot"></div>
+      <span class="label" id="pill-label">memdb</span>
+    </div>
+  </header>
+
+  <div class="main">
+
+    <!-- Left: Backend Selector -->
+    <div class="panel-left">
+      <div class="section-header">⚡ Choose Backend</div>
+      <div class="backend-list">
+        <div class="backend-card active memdb" data-backend="memdb" onclick="switchBackend('memdb')">
+          <div class="backend-name">
+            <span class="icon">⚡</span> MemDB
+            <span class="backend-tag tag-memory">In-Memory</span>
+          </div>
+          <div class="backend-desc">Lightning-fast, ephemeral storage. Perfect for caching, testing, and session data. No disk I/O overhead.</div>
+        </div>
+        <div class="backend-card badgerdb" data-backend="badgerdb" onclick="switchBackend('badgerdb')">
+          <div class="backend-name">
+            <span class="icon">🦡</span> BadgerDB
+            <span class="backend-tag tag-disk">LSM Tree</span>
+          </div>
+          <div class="backend-desc">High-performance persistent storage using an LSM tree. Optimized for write-heavy workloads and SSD environments.</div>
+        </div>
+        <div class="backend-card pebbledb" data-backend="pebbledb" onclick="switchBackend('pebbledb')">
+          <div class="backend-name">
+            <span class="icon">🪨</span> PebbleDB
+            <span class="backend-tag tag-rocks">RocksDB-compat</span>
+          </div>
+          <div class="backend-desc">RocksDB-compatible engine by CockroachDB. Excellent read performance with compaction strategies.</div>
+        </div>
+      </div>
+
+      <div class="features" style="border-top:1px solid var(--border); padding-top:12px;">
+        <div class="section-header" style="padding:0 0 10px 0; border:none;">✨ Library Benefits</div>
+        <div class="feature-item"><span class="check">✓</span><span>Swap backends with one line of code — zero application changes</span></div>
+        <div class="feature-item"><span class="check">✓</span><span>Context-aware API with built-in timeouts &amp; cancellation</span></div>
+        <div class="feature-item"><span class="check">✓</span><span>Atomic batch writes for consistency across multiple keys</span></div>
+        <div class="feature-item"><span class="check">✓</span><span>Prefix-based scanning &amp; iteration for efficient range queries</span></div>
+        <div class="feature-item"><span class="check">✓</span><span>Minimal interface — just Put, Get, Delete, Batch, Scan</span></div>
+        <div class="feature-item"><span class="check">✓</span><span>Raw bytes API — bring your own encoder (JSON, RLP, YAML)</span></div>
+      </div>
+    </div>
+
+    <!-- Center: Operations + DB View -->
+    <div class="panel-main">
+      <!-- Operation tabs -->
+      <div class="op-tabs">
+        <div class="op-tab active" data-tab="put" onclick="setTab('put')">➕ Put</div>
+        <div class="op-tab" data-tab="get" onclick="setTab('get')">🔍 Get</div>
+        <div class="op-tab" data-tab="delete" onclick="setTab('delete')">🗑 Delete</div>
+        <div class="op-tab" data-tab="scan" onclick="setTab('scan')">📂 Scan</div>
+        <div class="op-tab" data-tab="batch" onclick="setTab('batch')">⚡ Batch <span class="tab-badge">atomic</span></div>
+      </div>
+
+      <div class="op-panel">
+        <!-- PUT -->
+        <div class="op-content active" id="tab-put">
+          <div class="field-row">
+            <div class="field">
+              <label>Key</label>
+              <input id="put-key" placeholder="e.g. user:alice" spellcheck="false">
+            </div>
+            <div class="field">
+              <label>Value</label>
+              <input id="put-val" placeholder='e.g. {"name":"Alice"}' spellcheck="false">
+            </div>
+            <button class="btn btn-green" onclick="doPut()" style="margin-top:18px;">➕ Put</button>
+          </div>
+          <div class="result-box" id="put-result">Enter a key and value, then click Put.</div>
+        </div>
+
+        <!-- GET -->
+        <div class="op-content" id="tab-get">
+          <div class="field-row">
+            <div class="field">
+              <label>Key</label>
+              <input id="get-key" placeholder="e.g. user:alice" spellcheck="false">
+            </div>
+            <button class="btn btn-primary" onclick="doGet()" style="margin-top:18px;">🔍 Get</button>
+          </div>
+          <div class="result-box" id="get-result">Enter a key to look up its value.</div>
+        </div>
+
+        <!-- DELETE -->
+        <div class="op-content" id="tab-delete">
+          <div class="field-row">
+            <div class="field">
+              <label>Key</label>
+              <input id="del-key" placeholder="e.g. user:alice" spellcheck="false">
+            </div>
+            <button class="btn btn-red" onclick="doDelete()" style="margin-top:18px;">🗑 Delete</button>
+          </div>
+          <div class="result-box" id="del-result">Enter a key to delete it from the store.</div>
+        </div>
+
+        <!-- SCAN -->
+        <div class="op-content" id="tab-scan">
+          <div class="field-row">
+            <div class="field">
+              <label>Prefix</label>
+              <input id="scan-prefix" placeholder='e.g. "user:" or "config:"' spellcheck="false">
+            </div>
+            <button class="btn btn-orange" onclick="doScan()" style="margin-top:18px;">📂 Scan</button>
+          </div>
+          <div class="result-box" id="scan-result">Enter a prefix to iterate over matching keys. Try "user:" or "config:"</div>
+          <div class="scan-results" id="scan-results"></div>
+        </div>
+
+        <!-- BATCH -->
+        <div class="op-content" id="tab-batch">
+          <div style="margin-bottom:10px; color:var(--muted); font-size:12px;">All operations below are committed atomically in a single batch.</div>
+          <div id="batch-items">
+            <div class="batch-row">
+              <select><option value="put">PUT</option><option value="delete">DELETE</option></select>
+              <input placeholder="key" style="flex:1" spellcheck="false">
+              <input placeholder="value" style="flex:2" spellcheck="false">
+              <button class="btn" onclick="removeBatchRow(this)">✕</button>
+            </div>
+          </div>
+          <div style="display:flex; gap:10px; margin-top:10px;">
+            <button class="btn btn-primary btn-sm" onclick="addBatchRow()">+ Add Operation</button>
+            <button class="btn btn-orange" onclick="doBatch()">⚡ Commit Batch</button>
+          </div>
+          <div class="result-box" id="batch-result" style="margin-top:12px;">Add operations and commit them atomically.</div>
+        </div>
+      </div>
+
+      <!-- DB view -->
+      <div class="db-view">
+        <div class="db-toolbar">
+          <span style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;">Live Store</span>
+          <input id="filter-input" placeholder="Filter keys..." style="flex:1;padding:5px 10px;font-size:12px;" oninput="filterRows(this.value)">
+          <span class="db-count" id="db-count">0 entries</span>
+          <button class="btn btn-sm" style="background:var(--bg3);border:1px solid var(--border);color:var(--muted);" onclick="refreshKeys()">↻ Refresh</button>
+        </div>
+        <div class="db-header">
+          <span>KEY</span><span>VALUE</span><span style="text-align:right">TIME</span><span></span>
+        </div>
+        <div class="db-entries" id="db-entries">
+          <div class="empty-state"><div class="icon">📦</div><p>Loading store...</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: Activity Log -->
+    <div class="panel-right">
+      <div class="section-header">📋 Activity Log</div>
+      <div class="log-list" id="log-list"></div>
+      <div class="stats-bar">
+        <div class="stat"><div class="stat-val" id="stat-ops">0</div><div class="stat-label">Ops</div></div>
+        <div class="stat"><div class="stat-val" id="stat-puts">0</div><div class="stat-label">Puts</div></div>
+        <div class="stat"><div class="stat-val" id="stat-gets">0</div><div class="stat-label">Gets</div></div>
+        <div class="stat"><div class="stat-val" id="stat-dels">0</div><div class="stat-label">Dels</div></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+let currentBackend = 'memdb';
+const stats = { ops: 0, puts: 0, gets: 0, dels: 0 };
+
+// --- Backend switching ---
+async function switchBackend(name) {
+  if (name === currentBackend) return;
+  const res = await api('POST', '/api/switch', { backend: name });
+  if (res.ok) {
+    currentBackend = name;
+    document.querySelectorAll('.backend-card').forEach(c => {
+      c.classList.toggle('active', c.dataset.backend === name);
+    });
+    document.getElementById('pill-label').textContent = name;
+    addLog('SW', `→ ${name}`, '', true, name);
+    refreshKeys();
+  }
+}
+
+// --- Operation tabs ---
+function setTab(tab) {
+  document.querySelectorAll('.op-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+  document.querySelectorAll('.op-content').forEach(c => c.classList.toggle('active', c.id === 'tab-' + tab));
+}
+
+// --- API calls ---
+async function api(method, path, body) {
+  const opts = { method, headers: { 'Content-Type': 'application/json' } };
+  if (body) opts.body = JSON.stringify(body);
+  const r = await fetch(path, opts);
+  return r.json();
+}
+
+// --- Operations ---
+async function doPut() {
+  const key = document.getElementById('put-key').value.trim();
+  const val = document.getElementById('put-val').value.trim();
+  if (!key) { setResult('put-result', false, 'Key is required.'); return; }
+  const res = await api('POST', '/api/put', { key, value: val });
+  setResult('put-result', res.ok, res.ok ? `✓ Stored: ${key} = ${val}` : res.error);
+  if (res.ok) {
+    stats.puts++; updateStats();
+    addLog('PUT', key, val, true, currentBackend);
+    refreshKeys(key);
+  } else addLog('PUT', key, val, false, currentBackend);
+}
+
+async function doGet() {
+  const key = document.getElementById('get-key').value.trim();
+  if (!key) { setResult('get-result', false, 'Key is required.'); return; }
+  const res = await api('GET', `/api/get?key=${encodeURIComponent(key)}`);
+  setResult('get-result', res.ok, res.ok ? `✓ ${key}\n→ ${res.data.value}` : res.error);
+  stats.gets++; updateStats();
+  addLog('GET', key, res.ok ? res.data.value : '(not found)', res.ok, currentBackend);
+  if (res.ok) highlightRow(key);
+}
+
+async function doDelete() {
+  const key = document.getElementById('del-key').value.trim();
+  if (!key) { setResult('del-result', false, 'Key is required.'); return; }
+  const res = await api('DELETE', `/api/delete?key=${encodeURIComponent(key)}`);
+  setResult('del-result', res.ok, res.ok ? `✓ Deleted: ${key}` : res.error);
+  if (res.ok) {
+    stats.dels++; updateStats();
+    addLog('DEL', key, '', true, currentBackend);
+    animateDelete(key);
+    setTimeout(() => refreshKeys(), 400);
+  } else addLog('DEL', key, '', false, currentBackend);
+}
+
+async function doScan() {
+  const prefix = document.getElementById('scan-prefix').value.trim();
+  const res = await api('GET', `/api/scan?prefix=${encodeURIComponent(prefix)}`);
+  const container = document.getElementById('scan-results');
+  if (!res.ok || !res.data || res.data.length === 0) {
+    setResult('scan-result', false, prefix ? `No keys matching prefix "${prefix}"` : 'No keys found.');
+    container.innerHTML = '';
+    return;
+  }
+  setResult('scan-result', true, `✓ Found ${res.data.length} key${res.data.length !== 1 ? 's' : ''} with prefix "${prefix || '(all)'}":`);
+  container.innerHTML = res.data.map(e =>
+    `<div class="scan-row"><span class="sk">${esc(e.key)}</span><span class="sv">= ${esc(e.value)}</span></div>`
+  ).join('');
+  stats.ops++; updateStats();
+  addLog('SCAN', `prefix:"${prefix}"`, `${res.data.length} results`, true, currentBackend);
+}
+
+// --- Batch ---
+function addBatchRow() {
+  const row = document.createElement('div');
+  row.className = 'batch-row';
+  row.innerHTML = `
+    <select><option value="put">PUT</option><option value="delete">DELETE</option></select>
+    <input placeholder="key" style="flex:1" spellcheck="false">
+    <input placeholder="value" style="flex:2" spellcheck="false">
+    <button class="btn" onclick="removeBatchRow(this)">✕</button>
+  `;
+  document.getElementById('batch-items').appendChild(row);
+}
+function removeBatchRow(btn) {
+  const items = document.getElementById('batch-items');
+  if (items.children.length > 1) btn.closest('.batch-row').remove();
+}
+async function doBatch() {
+  const rows = document.querySelectorAll('#batch-items .batch-row');
+  const ops = [];
+  rows.forEach(row => {
+    const type = row.querySelector('select').value;
+    const key = row.querySelectorAll('input')[0].value.trim();
+    const value = row.querySelectorAll('input')[1].value.trim();
+    if (key) ops.push({ type, key, value });
+  });
+  if (!ops.length) { setResult('batch-result', false, 'Add at least one operation.'); return; }
+  const res = await api('POST', '/api/batch', { ops });
+  setResult('batch-result', res.ok, res.ok ? `✓ Committed ${res.data.ops} operations atomically.` : res.error);
+  if (res.ok) {
+    stats.puts += ops.filter(o => o.type === 'put').length;
+    stats.dels += ops.filter(o => o.type === 'delete').length;
+    updateStats();
+    addLog('BATCH', `${ops.length} ops`, ops.map(o => `${o.type.toUpperCase()} ${o.key}`).join(', '), true, currentBackend);
+    refreshKeys();
+  }
+}
+
+// --- DB View ---
+let allEntries = [];
+async function refreshKeys(highlightKey) {
+  const res = await api('GET', '/api/keys');
+  if (!res.ok) return;
+  allEntries = res.data || [];
+  renderEntries(allEntries, highlightKey);
+}
+
+function renderEntries(entries, highlightKey) {
+  const container = document.getElementById('db-entries');
+  const filter = document.getElementById('filter-input').value.toLowerCase();
+  const filtered = filter ? entries.filter(e => e.key.toLowerCase().includes(filter) || e.value.toLowerCase().includes(filter)) : entries;
+  document.getElementById('db-count').textContent = `${filtered.length} of ${entries.length} entries`;
+
+  if (!filtered.length) {
+    container.innerHTML = `<div class="empty-state"><div class="icon">🔍</div><p>${filter ? 'No matching keys.' : 'Store is empty. Put some data!'}</p></div>`;
+    return;
+  }
+  container.innerHTML = filtered.map(e => `
+    <div class="db-row${e.key === highlightKey ? ' highlight' : ''}" id="row-${CSS.escape(e.key)}">
+      <span class="db-key" onclick="fillGet('${esc(e.key)}')" title="${esc(e.key)}">${esc(e.key)}</span>
+      <span class="db-val" title="${esc(e.value)}">${esc(e.value)}</span>
+      <span class="db-ts">${e.updatedAt || ''}</span>
+      <button class="db-del-btn" onclick="quickDelete('${esc(e.key)}')" title="Delete">✕</button>
+    </div>
+  `).join('');
+}
+
+function filterRows(val) { renderEntries(allEntries); }
+
+function highlightRow(key) {
+  const el = document.getElementById('row-' + CSS.escape(key));
+  if (el) { el.classList.remove('highlight'); void el.offsetWidth; el.classList.add('highlight'); }
+}
+
+function animateDelete(key) {
+  const el = document.getElementById('row-' + CSS.escape(key));
+  if (el) el.classList.add('deleted');
+}
+
+function fillGet(key) {
+  setTab('get');
+  document.getElementById('get-key').value = key;
+}
+
+async function quickDelete(key) {
+  const res = await api('DELETE', `/api/delete?key=${encodeURIComponent(key)}`);
+  if (res.ok) {
+    stats.dels++; updateStats();
+    addLog('DEL', key, '', true, currentBackend);
+    animateDelete(key);
+    setTimeout(() => refreshKeys(), 400);
+  }
+}
+
+// --- Helpers ---
+function setResult(id, ok, msg) {
+  const el = document.getElementById(id);
+  el.className = 'result-box ' + (ok ? 'ok' : 'err');
+  el.textContent = msg;
+}
+
+function esc(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function addLog(op, key, val, ok, backend) {
+  stats.ops++;
+  const list = document.getElementById('log-list');
+  const ts = new Date().toLocaleTimeString('en-US', { hour12: false });
+  const item = document.createElement('div');
+  item.className = 'log-item';
+  const statusClass = ok ? 'log-status-ok' : 'log-status-err';
+  const valStr = val ? ` = <span class="log-val">${esc(val.length > 30 ? val.slice(0, 30) + '…' : val)}</span>` : '';
+  item.innerHTML = `
+    <div class="log-ts">${ts}</div>
+    <span class="log-op ${op}">${op}</span>
+    <span class="log-key">${esc(key)}</span>${valStr}
+    <span class="${statusClass}">${ok ? ' ✓' : ' ✗'}</span>
+    <span class="log-backend">${backend}</span>
+  `;
+  list.insertBefore(item, list.firstChild);
+  if (list.children.length > 80) list.removeChild(list.lastChild);
+  updateStats();
+}
+
+function updateStats() {
+  document.getElementById('stat-ops').textContent = stats.ops;
+  document.getElementById('stat-puts').textContent = stats.puts;
+  document.getElementById('stat-gets').textContent = stats.gets;
+  document.getElementById('stat-dels').textContent = stats.dels;
+}
+
+// Enter key support
+['put-key','put-val'].forEach(id => document.getElementById(id)?.addEventListener('keydown', e => e.key==='Enter' && doPut()));
+document.getElementById('get-key')?.addEventListener('keydown', e => e.key==='Enter' && doGet());
+document.getElementById('del-key')?.addEventListener('keydown', e => e.key==='Enter' && doDelete());
+document.getElementById('scan-prefix')?.addEventListener('keydown', e => e.key==='Enter' && doScan());
+
+// Initial load
+refreshKeys();
+// Auto-refresh every 5s
+setInterval(refreshKeys, 5000);
+</script>
+</body>
+</html>
