@@ -22,8 +22,13 @@ name = "Start application"
 author = "agent"
 
 [workflows.workflow.metadata]
-outputType = "console"
+outputType = "webview"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "go test ./... -v -count=1; echo 'Tests complete. Note: TestPebbleReverseIteratorOrder has a pre-existing bug in the imported repo.'; tail -f /dev/null"
+args = "go run ./cmd/demo"
+waitForPort = 5000
+
+[[ports]]
+localPort = 5000
+externalPort = 80
