@@ -4,7 +4,8 @@ import (
 	"context"
 
 	db "github.com/AmirSoleimani/MemoryDB/memdb"
-	"github.com/rawbytedev/zerokv"
+	zerokv "github.com/rawbytedev/zerokv/core"
+	"github.com/rawbytedev/zerokv/internal"
 )
 
 type MemDB struct {
@@ -16,7 +17,7 @@ type MemBatch struct {
 }
 
 // NewMemDB initializes and returns a zerokv.Core instance at the specified path(MemDB).
-func NewMemDataBase(cfg Config) (zerokv.Core, error) {
+func NewMemDB(cfg Config) (zerokv.Core, error) {
 	db := db.NewMemDB()
 	return &MemDB{db: db}, nil
 }
@@ -25,7 +26,7 @@ func NewMemDataBase(cfg Config) (zerokv.Core, error) {
 
 // Put inserts or updates a key-value pair in the database.
 func (m *MemDB) Put(ctx context.Context, key []byte, data []byte) error {
-	if err := ctx.Err(); err != nil {
+	if err := internal.CheckContext(ctx); err != nil {
 		return err
 	}
 	return m.db.Put(key, data)
@@ -33,7 +34,7 @@ func (m *MemDB) Put(ctx context.Context, key []byte, data []byte) error {
 
 // Get retrieves the value for a given key. Returns an error if not found.
 func (m *MemDB) Get(ctx context.Context, key []byte) ([]byte, error) {
-	if err := ctx.Err(); err != nil {
+	if err := internal.CheckContext(ctx); err != nil {
 		return nil, err
 	}
 	val, err := m.db.Get(key)
@@ -45,7 +46,7 @@ func (m *MemDB) Get(ctx context.Context, key []byte) ([]byte, error) {
 
 // Del deletes a key-value pair from the database.
 func (p *MemDB) Delete(ctx context.Context, key []byte) error {
-	if err := ctx.Err(); err != nil {
+	if err := internal.CheckContext(ctx); err != nil {
 		return err
 	}
 	return p.db.Delete(key)
@@ -74,6 +75,9 @@ func (m *MemBatch) Delete(key []byte) error {
 
 // flushBatch flushes any pending batch operations.
 func (m *MemBatch) Commit(ctx context.Context) error {
+	if err := internal.CheckContext(ctx); err != nil {
+		return err
+	}
 	return m.batch.Write()
 }
 func (m *MemDB) Scan(value []byte) zerokv.Iterator {

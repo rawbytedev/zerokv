@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/rawbytedev/zerokv"
-	"github.com/rawbytedev/zerokv/helpers"
+	zerokv "github.com/rawbytedev/zerokv/core"
+	"github.com/rawbytedev/zerokv/testing/fixture"
 	"github.com/stretchr/testify/require"
 )
 
@@ -14,8 +14,8 @@ func FillValues(t *testing.T, db zerokv.Core) ([][]byte, [][]byte) {
 	keys := make([][]byte, 10)
 	values := make([][]byte, 10)
 	for i := 0; i < 10; i++ {
-		keys[i] = helpers.RandomBytes(16)
-		values[i] = helpers.RandomBytes(32)
+		keys[i] = fixture.RandomBytes(16)
+		values[i] = fixture.RandomBytes(32)
 		pref_key := make([]byte, 0)
 		pref_key = append(pref_key, []byte("pre_")...)
 		pref_key = append(pref_key, keys[i]...)
@@ -82,7 +82,7 @@ func TestZeroKvIterator(t *testing.T) {
 }
 
 func testIterateValues(t *testing.T, name string) {
-	db := helpers.SetupDB(t, name)
+	db := fixture.SetupDB(t, name)
 	_, _ = FillValues(t, db)
 	it := db.Scan([]byte("pre_"))
 	for range 10 {
@@ -95,7 +95,7 @@ func testIterateValues(t *testing.T, name string) {
 }
 
 func testIterateHasKey(t *testing.T, name string) {
-	db := helpers.SetupDB(t, name)
+	db := fixture.SetupDB(t, name)
 	keys, _ := FillValues(t, db)
 	it := db.Scan([]byte("pre_"))
 	for range 10 {
@@ -117,7 +117,7 @@ func testIterateHasKey(t *testing.T, name string) {
 
 // testIterateEmptyDatabase tests iteration over an empty database
 func testIterateEmptyDatabase(t *testing.T, name string) {
-	db := helpers.SetupDB(t, name)
+	db := fixture.SetupDB(t, name)
 	it := db.Scan([]byte("pre_"))
 	require.False(t, it.Next(), "Expected Next() to return false on empty database")
 	require.Nil(t, it.Key(), "Expected Key() to return nil on empty database")
@@ -129,9 +129,9 @@ func testIterateEmptyDatabase(t *testing.T, name string) {
 
 // testIterateSingleKey tests iteration with only one matching key
 func testIterateSingleKey(t *testing.T, name string) {
-	db := helpers.SetupDB(t, name)
+	db := fixture.SetupDB(t, name)
 	key := []byte("pre_single")
-	value := helpers.RandomBytes(32)
+	value := fixture.RandomBytes(32)
 	err := db.Put(t.Context(), key, value)
 	require.NoError(t, err)
 
@@ -147,11 +147,11 @@ func testIterateSingleKey(t *testing.T, name string) {
 
 // testIteratePrefixNotFound tests iteration when prefix has no matches
 func testIteratePrefixNotFound(t *testing.T, name string) {
-	db := helpers.SetupDB(t, name)
+	db := fixture.SetupDB(t, name)
 	// Insert keys with different prefix
-	err := db.Put(t.Context(), []byte("other_key1"), helpers.RandomBytes(32))
+	err := db.Put(t.Context(), []byte("other_key1"), fixture.RandomBytes(32))
 	require.NoError(t, err)
-	err = db.Put(t.Context(), []byte("other_key2"), helpers.RandomBytes(32))
+	err = db.Put(t.Context(), []byte("other_key2"), fixture.RandomBytes(32))
 	require.NoError(t, err)
 
 	// Try to iterate with non-matching prefix
@@ -164,7 +164,7 @@ func testIteratePrefixNotFound(t *testing.T, name string) {
 
 // testIterateVerifyValues tests that values from iterator match inserted values
 func testIterateVerifyValues(t *testing.T, name string) {
-	db := helpers.SetupDB(t, name)
+	db := fixture.SetupDB(t, name)
 	_, values := FillValues(t, db)
 
 	it := db.Scan([]byte("pre_"))
@@ -199,7 +199,7 @@ func testIterateVerifyValues(t *testing.T, name string) {
 
 // testIteratorErrorHandling tests the Error() method
 func testIteratorErrorHandling(t *testing.T, name string) {
-	db := helpers.SetupDB(t, name)
+	db := fixture.SetupDB(t, name)
 	_, values := FillValues(t, db)
 
 	it := db.Scan([]byte("pre_"))
@@ -229,7 +229,7 @@ func testIteratorErrorHandling(t *testing.T, name string) {
 
 // testIterateKeysWithSpecialCharacters tests iteration with keys containing special characters
 func testIterateKeysWithSpecialCharacters(t *testing.T, name string) {
-	db := helpers.SetupDB(t, name)
+	db := fixture.SetupDB(t, name)
 
 	// Insert keys with special characters in prefix
 	keys := [][]byte{

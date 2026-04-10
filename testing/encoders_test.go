@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/rawbytedev/zerokv/helpers"
+	"github.com/rawbytedev/zerokv/testing/fixture"
 	"github.com/stretchr/testify/require"
 )
 
@@ -40,7 +40,7 @@ func TestEncoders(t *testing.T) {
 func testEncoding(t *testing.T, name string) {
 	field := GenerateRandom()
 	field2 := &TestingStruct{}
-	enc := helpers.SetupEncoders(t, name)
+	enc := fixture.SetupEncoders(t, name)
 	data, err := enc.Encode(field)
 	require.NoError(t, err)
 	err = enc.Decode(data, field2)

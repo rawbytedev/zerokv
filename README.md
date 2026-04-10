@@ -198,24 +198,29 @@ ZeroKV adds minimal overhead:
 - Zero-copy where possible
 - Efficient memory handling
 
-See benchmark results in [BENCHMARK.md](BENCHMARK.md) (if available).
-
 ## Project Structure
 
 ```js
 zerokv/
-├── interface.go            # Core interfaces
-├── badgerdb/               # BadgerDB implementation
-│   ├── badgerdb.go         # Main code
-│   ├── badgerdb_test.go    # Tests
-│   └── options.go          # Configuration
-├── pebbledb/               # PebbleDB implementation
-│   ├── pebbledb.go
-│   ├── pebbledb_test.go
-│   └── options.go
-├── tests/                  # Shared integration tests
-├── helpers/                # Test utilities
-├── examples/               # Usage examples
+├── core/
+│   └── interface.go     # Core interfaces
+├── internal/            # Internal utilities
+├── implementations/
+│   ├── badgerdb/        # BadgerDB implementation
+│   │   ├── badgerdb.go  # Main code
+│   │   ├── badgerdb_test.go # Tests
+│   │   └── options.go   # Configuration
+│   ├── pebbledb/        # PebbleDB implementation
+│   │   ├── pebbledb.go
+│   │   ├── pebbledb_test.go
+│   └── memdb/           # MemDB implementation
+│       ├── mem.go
+│       ├── mem_test.go
+│       └── options.go
+├── serializers/         # Serialization helpers
+├── helpers/             # Test utilities
+├── testing/             # Shared integration tests
+├── examples/            # Usage examples
 ```
 
 ## Testing

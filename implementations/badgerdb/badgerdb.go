@@ -4,7 +4,8 @@ import (
 	"context"
 	"errors"
 
-	"github.com/rawbytedev/zerokv"
+	zerokv "github.com/rawbytedev/zerokv/core"
+	"github.com/rawbytedev/zerokv/internal"
 
 	"github.com/dgraph-io/badger/v4"
 )
@@ -20,7 +21,7 @@ type badgerIterator struct {
 	Iterator *badger.Iterator
 	started  bool
 	valid    bool
-	err      []error
+	err      internal.IteratorErrors
 }
 
 // NewBadgerDB initializes and returns a zerokv.Core instance at the specified path(BadgerDB).
@@ -42,7 +43,7 @@ func NewBadgerDB(cfg Config) (zerokv.Core, error) {
 
 // Put inserts or updates a key-value pair in the database.
 func (b *BadgerDB) Put(ctx context.Context, key, value []byte) error {
-	if err := ctx.Err(); err != nil {
+	if err := internal.CheckContext(ctx); err != nil {
 		return err
 	}
 	return b.db.Update(func(txn *badger.Txn) error {
@@ -52,7 +53,7 @@ func (b *BadgerDB) Put(ctx context.Context, key, value []byte) error {
 
 // Get retrieves the value for a given key. Returns an error if not found.
 func (b *BadgerDB) Get(ctx context.Context, key []byte) ([]byte, error) {
-	if err := ctx.Err(); err != nil {
+	if err := internal.CheckContext(ctx); err != nil {
 		return nil, err
 	}
 	var data []byte
@@ -72,7 +73,7 @@ func (b *BadgerDB) Get(ctx context.Context, key []byte) ([]byte, error) {
 
 // Delete removes a key-value pair from the database.
 func (b *BadgerDB) Delete(ctx context.Context, key []byte) error {
-	if err := ctx.Err(); err != nil {
+	if err := internal.CheckContext(ctx); err != nil {
 		return err
 	}
 	return b.db.Update(func(txn *badger.Txn) error {
@@ -113,7 +114,7 @@ func (b *badgerBatch) Delete(key []byte) error {
 
 // Commits commits the batch operations to the database.
 func (b *badgerBatch) Commit(ctx context.Context) error {
-	if err := ctx.Err(); err != nil {
+	if err := internal.CheckContext(ctx); err != nil {
 		return err
 	}
 	return b.batch.Flush()
@@ -148,10 +149,7 @@ func (it *badgerIterator) Value() []byte {
 		return nil
 	}
 	data, err := it.Iterator.Item().ValueCopy(nil)
-	if err != nil {
-		it.err = append(it.err, err)
-		return []byte{}
-	}
+	it.err.AddError(err)
 	return data
 }
 
@@ -161,10 +159,7 @@ func (it *badgerIterator) Release() {
 }
 
 func (it *badgerIterator) Error() error {
-	if len(it.err) == 0 {
-		return nil
-	}
-	return it.err[len(it.err)-1]
+	return it.err.Error()
 }
 
 //  --- specials methods to use with an instance of badgerdb for some other operations
@@ -184,7 +179,7 @@ type badgerReverseIterator struct {
 	Iterator *badger.Iterator
 	started  bool
 	valid    bool
-	err      []error
+	err      internal.IteratorErrors
 }
 
 func (it *badgerReverseIterator) Next() bool {
@@ -209,10 +204,7 @@ func (it *badgerReverseIterator) Value() []byte {
 		return nil
 	}
 	data, err := it.Iterator.Item().ValueCopy(nil)
-	if err != nil {
-		it.err = append(it.err, err)
-		return []byte{}
-	}
+	it.err.AddError(err)
 	return data
 }
 
@@ -222,10 +214,7 @@ func (it *badgerReverseIterator) Release() {
 }
 
 func (it *badgerReverseIterator) Error() error {
-	if len(it.err) == 0 {
-		return nil
-	}
-	return it.err[len(it.err)-1]
+	return it.err.Error()
 }
 
 func NewReverseIterator(b *BadgerDB) zerokv.Iterator {

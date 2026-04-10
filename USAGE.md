@@ -28,7 +28,7 @@ package main
 
 import (
     "context"
-    "github.com/rawbytedev/zerokv/badgerdb"
+    "github.com/rawbytedev/zerokv/implementations/badgerdb"
 )
 
 func main() {
@@ -248,6 +248,37 @@ func main() {
     db.Close()
 }
 ```
+
+## Using MemDB for Testing
+
+MemDB is an in-memory implementation perfect for testing and development:
+
+```go
+package main
+
+import (
+    "context"
+    "github.com/rawbytedev/zerokv/implementations/memdb"
+)
+
+func main() {
+    // No configuration needed - data stays in memory
+    db, err := memdb.NewMemDB(memdb.Config{})
+    if err != nil {
+        panic(err)
+    }
+    defer db.Close()
+    
+    ctx := context.Background()
+    
+    // Use like any other ZeroKV database
+    db.Put(ctx, []byte("test"), []byte("value"))
+    value, _ := db.Get(ctx, []byte("test"))
+    println(string(value)) // Output: value
+}
+```
+
+**Note:** MemDB does not support the `Scan` operation for iteration.
 
 ## Error Handling
 

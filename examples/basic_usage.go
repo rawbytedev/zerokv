@@ -5,8 +5,8 @@ import (
 	"context"
 	"fmt"
 
-	// "github.com/rawbytedev/zerokv/pebbledb" // swapping db requires import the KV implementation
-	"github.com/rawbytedev/zerokv/badgerdb"
+	// "github.com/rawbytedev/zerokv/implementations/pebbledb" // swapping db requires import the KV implementation
+	"github.com/rawbytedev/zerokv/implementations/badgerdb"
 )
 
 func basic_main() {
