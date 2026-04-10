@@ -3,8 +3,8 @@ package main
 import (
 	"context"
 
-	"github.com/rawbytedev/zerokv/badgerdb"
-	"github.com/rawbytedev/zerokv/pebbledb"
+	"github.com/rawbytedev/zerokv/implementations/badgerdb"
+	"github.com/rawbytedev/zerokv/implementations/pebbledb"
 )
 
 func multi_main() {

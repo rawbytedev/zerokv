@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/rawbytedev/zerokv/helpers"
+	"github.com/rawbytedev/zerokv/testing/fixture"
 	"github.com/stretchr/testify/require"
 )
 
@@ -48,12 +48,12 @@ func TestZeroKvImplementation(t *testing.T) {
 
 // TestGetPutDelete tests basic Put, Get, and Delete operations.
 func testGetPutDelete(t *testing.T, name string) {
-	db := helpers.SetupDB(t, name)
+	db := fixture.SetupDB(t, name)
 	keys := make([][]byte, 10)
 	values := make([][]byte, 10)
 	for i := 0; i < 10; i++ {
-		keys[i] = helpers.RandomBytes(16)
-		values[i] = helpers.RandomBytes(32)
+		keys[i] = fixture.RandomBytes(16)
+		values[i] = fixture.RandomBytes(32)
 		err := db.Put(t.Context(), keys[i], values[i])
 		if err != nil {
 			t.Fatalf("Failed to put key-value pair: %v", err)
@@ -73,8 +73,8 @@ func testGetPutDelete(t *testing.T, name string) {
 
 // TestGetNonExistentKey tests retrieval of a non-existent key.
 func testGetNonExistentKey(t *testing.T, name string) {
-	db := helpers.SetupDB(t, name)
-	nonExistentKey := helpers.RandomBytes(16)
+	db := fixture.SetupDB(t, name)
+	nonExistentKey := fixture.RandomBytes(16)
 	_, err := db.Get(t.Context(), nonExistentKey)
 	require.Error(t, err, "Expected error when getting non-existent key")
 	defer db.Close()
@@ -82,10 +82,10 @@ func testGetNonExistentKey(t *testing.T, name string) {
 
 // TestOverwriteKey tests overwriting an existing key.
 func testOverwriteKey(t *testing.T, name string) {
-	db := helpers.SetupDB(t, name)
-	key := helpers.RandomBytes(16)
-	value1 := helpers.RandomBytes(32)
-	value2 := helpers.RandomBytes(32)
+	db := fixture.SetupDB(t, name)
+	key := fixture.RandomBytes(16)
+	value1 := fixture.RandomBytes(32)
+	value2 := fixture.RandomBytes(32)
 	err := db.Put(t.Context(), key, value1)
 	require.NoError(t, err, "Error putting first value")
 	retrievedValue, err := db.Get(t.Context(), key)
@@ -101,7 +101,7 @@ func testOverwriteKey(t *testing.T, name string) {
 
 // TestClose tests closing the PebbleDB instance.
 func testClose(t *testing.T, name string) {
-	db := helpers.SetupDB(t, name)
+	db := fixture.SetupDB(t, name)
 	err := db.Close()
 	require.NoError(t, err, "Error closing PebbleDB")
 }

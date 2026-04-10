@@ -4,21 +4,21 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/rawbytedev/zerokv"
-	"github.com/rawbytedev/zerokv/badgerdb"
-	"github.com/rawbytedev/zerokv/helpers"
+	zerokv "github.com/rawbytedev/zerokv/core"
+	"github.com/rawbytedev/zerokv/implementations/badgerdb"
+	"github.com/rawbytedev/zerokv/testing/fixture"
 	"github.com/stretchr/testify/require"
 )
 
 // TestBadgerBatchOperations tests batch Put and Get operations.
 func TestBadgerBatchOperations(t *testing.T) {
-	db := helpers.SetupDB(t, "badgerdb")
+	db := fixture.SetupDB(t, "badgerdb")
 	batch := db.Batch()
 	keys := make([][]byte, 5)
 	values := make([][]byte, 5)
 	for i := 0; i < 5; i++ {
-		keys[i] = helpers.RandomBytes(16)
-		values[i] = helpers.RandomBytes(32)
+		keys[i] = fixture.RandomBytes(16)
+		values[i] = fixture.RandomBytes(32)
 		err := batch.Put(keys[i], values[i])
 		require.NoError(t, err, "Error adding Put operation to batch")
 	}
@@ -43,8 +43,8 @@ func fillBadgerValues(t *testing.T, db zerokv.Core) ([][]byte, [][]byte) {
 	keys := make([][]byte, 10)
 	values := make([][]byte, 10)
 	for i := 0; i < 10; i++ {
-		keys[i] = helpers.RandomBytes(16)
-		values[i] = helpers.RandomBytes(32)
+		keys[i] = fixture.RandomBytes(16)
+		values[i] = fixture.RandomBytes(32)
 		pref_key := make([]byte, 0)
 		pref_key = append(pref_key, []byte("pre_")...)
 		pref_key = append(pref_key, keys[i]...)

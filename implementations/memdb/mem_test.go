@@ -1,20 +1,21 @@
 package memdb_test
 
 import (
-	"github.com/rawbytedev/zerokv/helpers"
-	"github.com/stretchr/testify/require"
 	"testing"
+
+	"github.com/rawbytedev/zerokv/testing/fixture"
+	"github.com/stretchr/testify/require"
 )
 
 // TestMemdbBatchOperations tests batch Put and Get operations.
 func TestMemdbBatchOperations(t *testing.T) {
-	db := helpers.SetupDB(t, "memdb")
+	db := fixture.SetupDB(t, "memdb")
 	batch := db.Batch()
 	keys := make([][]byte, 5)
 	values := make([][]byte, 5)
 	for i := 0; i < 5; i++ {
-		keys[i] = helpers.RandomBytes(16)
-		values[i] = helpers.RandomBytes(32)
+		keys[i] = fixture.RandomBytes(16)
+		values[i] = fixture.RandomBytes(32)
 		err := batch.Put(keys[i], values[i])
 		require.NoError(t, err, "Error adding Put operation to batch")
 	}

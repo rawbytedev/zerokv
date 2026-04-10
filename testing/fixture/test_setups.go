@@ -1,14 +1,14 @@
-package helpers
+package fixture
 
 import (
 	"crypto/rand"
 	"testing"
 
-	"github.com/rawbytedev/zerokv"
-	"github.com/rawbytedev/zerokv/badgerdb"
-	"github.com/rawbytedev/zerokv/encoders"
-	"github.com/rawbytedev/zerokv/memdb"
-	"github.com/rawbytedev/zerokv/pebbledb"
+	zerokv "github.com/rawbytedev/zerokv/core"
+	"github.com/rawbytedev/zerokv/implementations/badgerdb"
+	"github.com/rawbytedev/zerokv/implementations/memdb"
+	"github.com/rawbytedev/zerokv/implementations/pebbledb"
+	encoders "github.com/rawbytedev/zerokv/serializers"
 )
 
 // setupBadgerDB creates a temporary BadgerDB instance for testing.
@@ -26,7 +26,7 @@ func SetupDB(t *testing.T, name string) zerokv.Core {
 			Dir: tmp,
 		})
 	case "memdb":
-		db, err = memdb.NewMemDataBase(memdb.Config{})
+		db, err = memdb.NewMemDB(memdb.Config{})
 	}
 	if err != nil || db == nil {
 		t.Fatalf("Failed to create %s: %v", name, err)
