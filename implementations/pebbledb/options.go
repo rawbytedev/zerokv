@@ -35,5 +35,5 @@ func getWriteOpts(ctx context.Context) *pebble.WriteOptions {
 			return opts
 		}
 	}
-	return pebble.Sync // sensible default for most users
+	return pebble.Sync // default for most users
 }

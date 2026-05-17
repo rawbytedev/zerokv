@@ -2,7 +2,6 @@ package memdb
 
 import (
 	"context"
-	"time"
 
 	db "github.com/AmirSoleimani/MemoryDB/memdb"
 	zerokv "github.com/rawbytedev/zerokv/core"
@@ -33,13 +32,6 @@ func (m *MemDB) Put(ctx context.Context, key []byte, data []byte) error {
 	return m.db.Put(key, data)
 }
 
-func (m *MemDB) TTLPut(ctx context.Context, key []byte, data []byte, duration time.Duration) error {
-	if err := internal.CheckContext(ctx); err != nil {
-		return err
-	}
-	//panic("Doesn't support")
-	return m.db.Put(key, data)
-}
 
 // Get retrieves the value for a given key. Returns an error if not found.
 func (m *MemDB) Get(ctx context.Context, key []byte) ([]byte, error) {

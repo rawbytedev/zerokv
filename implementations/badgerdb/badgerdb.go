@@ -132,6 +132,11 @@ func (b *badgerBatch) Commit(ctx context.Context) error {
 	return b.batch.Flush()
 }
 
+func (b *badgerBatch) PutWithTTL(key []byte, value []byte, ttl time.Duration) error {
+	e := badger.NewEntry(key, value).WithTTL(ttl)
+	return b.batch.SetEntry(e)
+}
+
 // -- Iterator operations
 
 func (b *BadgerDB) Scan(prefix []byte) zerokv.Iterator {

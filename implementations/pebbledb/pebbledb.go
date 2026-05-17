@@ -3,7 +3,6 @@ package pebbledb
 import (
 	"context"
 	"errors"
-	"time"
 
 	"github.com/cockroachdb/pebble"
 	zerokv "github.com/rawbytedev/zerokv/core"
@@ -52,14 +51,7 @@ func (p *PebbleDB) Put(ctx context.Context, key []byte, data []byte) error {
 	if err := internal.CheckContext(ctx); err != nil {
 		return err
 	}
-	return p.db.Set(key, data, pebble.Sync)
-}
-
-func (p *PebbleDB) TTLPut(ctx context.Context, key []byte, data []byte, duration time.Duration) error {
-	if err := internal.CheckContext(ctx); err != nil {
-		return err
-	}
-	return p.db.Set(key, data, pebble.NoSync)
+	return p.db.Set(key, data, getWriteOpts(ctx))
 }
 
 // Get retrieves the value for a given key. Returns an error if not found.
@@ -80,7 +72,7 @@ func (p *PebbleDB) Delete(ctx context.Context, key []byte) error {
 	if err := internal.CheckContext(ctx); err != nil {
 		return err
 	}
-	return p.db.Delete(key, pebble.Sync)
+	return p.db.Delete(key, getWriteOpts(ctx))
 }
 
 // Close closes the database and releases all resources.
@@ -102,12 +94,12 @@ func (p *PebbleDB) Batch() zerokv.Batch {
 }
 
 func (p *pebbleBatch) Put(key []byte, data []byte) error {
-	return p.batch.Set(key, data, pebble.NoSync)
+	return p.batch.Set(key, data, nil)
 }
 
 // BatchDel adds a delete operation to the current batch.
 func (p *pebbleBatch) Delete(key []byte) error {
-	return p.batch.Delete(key, pebble.NoSync)
+	return p.batch.Delete(key, nil)
 }
 
 // flushBatch flushes any pending batch operations.
@@ -115,7 +107,8 @@ func (p *pebbleBatch) Commit(ctx context.Context) error {
 	if err := internal.CheckContext(ctx); err != nil {
 		return err
 	}
-	return p.batch.Commit(pebble.Sync)
+	opts := getWriteOpts(ctx)
+	return p.batch.Commit(opts)
 }
 
 // -- Iterator operations

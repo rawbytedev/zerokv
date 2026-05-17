@@ -15,14 +15,18 @@ import (
 func TestTTTL(t *testing.T) {
 	db := fixture.SetupDB(t, "badgerdb")
 	defer db.Close()
+
 	key := []byte{0x1, 0x12, 0x23}
 	value := []byte{0x1, 0x12, 0x23}
+
 	if ttlDB, ok := db.(ttl.TTLProvider); ok {
 		ttlDB.TTLPut(t.Context(), key, value, 5*time.Second)
 	} else {
 		t.Fatal("this database does not support TTL")
 	}
+
 	time.Sleep(6 * time.Second)
+
 	data, err := db.Get(t.Context(), key)
 	require.Nil(t, data, "Value not nil after expiry")
 	require.NotNil(t, err, "No error returned for key not found")
@@ -31,17 +35,32 @@ func TestTTTL(t *testing.T) {
 func TestBatchTTL(t *testing.T) {
 	db := fixture.SetupDB(t, "badgerdb")
 	defer db.Close()
+
+	batch := db.Batch()
+
 	key := []byte{0x1, 0x12, 0x23}
 	value := []byte{0x1, 0x12, 0x23}
-	if ttlDB, ok := db.(ttl.TTLProvider); ok {
-		ttlDB.TTLPut(t.Context(), key, value, 5*time.Second)
+	key2 := []byte{0x1, 0x12, 0x48}
+
+	if ttlDB, ok := batch.(ttl.BatchWithTTL); ok {
+		ttlDB.PutWithTTL(key, value, 3*time.Second)
+		ttlDB.PutWithTTL(key2, value, 1*time.Minute)
 	} else {
 		t.Fatal("this database does not support TTL")
 	}
-	time.Sleep(6 * time.Second)
+
+	err := batch.Commit(t.Context())
+	require.Nil(t, err, "Batch Operation failed")
+
+	time.Sleep(10 * time.Second)
+
 	data, err := db.Get(t.Context(), key)
 	require.Nil(t, data, "Value not nil after expiry")
 	require.NotNil(t, err, "No error returned for key not found")
+
+	data, err = db.Get(t.Context(), key2)
+	require.Nil(t, err, "Err should be nil")
+	require.Equal(t, data, value)
 }
 
 // TestBadgerBatchOperations tests batch Put and Get operations.
