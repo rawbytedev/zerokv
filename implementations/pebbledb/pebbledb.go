@@ -3,6 +3,7 @@ package pebbledb
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/cockroachdb/pebble"
 	zerokv "github.com/rawbytedev/zerokv/core"
@@ -52,6 +53,13 @@ func (p *PebbleDB) Put(ctx context.Context, key []byte, data []byte) error {
 		return err
 	}
 	return p.db.Set(key, data, pebble.Sync)
+}
+
+func (p *PebbleDB) TTLPut(ctx context.Context, key []byte, data []byte, duration time.Duration) error {
+	if err := internal.CheckContext(ctx); err != nil {
+		return err
+	}
+	return p.db.Set(key, data, pebble.NoSync)
 }
 
 // Get retrieves the value for a given key. Returns an error if not found.

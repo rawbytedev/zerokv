@@ -3,16 +3,51 @@ package badgerdb_test
 import (
 	"bytes"
 	"testing"
+	"time"
 
 	zerokv "github.com/rawbytedev/zerokv/core"
 	"github.com/rawbytedev/zerokv/implementations/badgerdb"
 	"github.com/rawbytedev/zerokv/testing/fixture"
+	ttl "github.com/rawbytedev/zerokv/ttl"
 	"github.com/stretchr/testify/require"
 )
+
+func TestTTTL(t *testing.T) {
+	db := fixture.SetupDB(t, "badgerdb")
+	defer db.Close()
+	key := []byte{0x1, 0x12, 0x23}
+	value := []byte{0x1, 0x12, 0x23}
+	if ttlDB, ok := db.(ttl.TTLProvider); ok {
+		ttlDB.TTLPut(t.Context(), key, value, 5*time.Second)
+	} else {
+		t.Fatal("this database does not support TTL")
+	}
+	time.Sleep(6 * time.Second)
+	data, err := db.Get(t.Context(), key)
+	require.Nil(t, data, "Value not nil after expiry")
+	require.NotNil(t, err, "No error returned for key not found")
+}
+
+func TestBatchTTL(t *testing.T) {
+	db := fixture.SetupDB(t, "badgerdb")
+	defer db.Close()
+	key := []byte{0x1, 0x12, 0x23}
+	value := []byte{0x1, 0x12, 0x23}
+	if ttlDB, ok := db.(ttl.TTLProvider); ok {
+		ttlDB.TTLPut(t.Context(), key, value, 5*time.Second)
+	} else {
+		t.Fatal("this database does not support TTL")
+	}
+	time.Sleep(6 * time.Second)
+	data, err := db.Get(t.Context(), key)
+	require.Nil(t, data, "Value not nil after expiry")
+	require.NotNil(t, err, "No error returned for key not found")
+}
 
 // TestBadgerBatchOperations tests batch Put and Get operations.
 func TestBadgerBatchOperations(t *testing.T) {
 	db := fixture.SetupDB(t, "badgerdb")
+	defer db.Close()
 	batch := db.Batch()
 	keys := make([][]byte, 5)
 	values := make([][]byte, 5)
@@ -35,7 +70,7 @@ func TestBadgerBatchOperations(t *testing.T) {
 	// This should also fail because the batch has already been committed
 	err = batch.Commit(t.Context())
 	require.Error(t, err, "Batch commit not permitted after finish")
-	defer db.Close()
+
 }
 
 // Helper to fill database with test values
@@ -65,10 +100,12 @@ func TestBadgerReverseIterator(t *testing.T) {
 	bdb := dbInterface.(*badgerdb.BadgerDB)
 	require.NotNil(t, bdb)
 
+	defer bdb.Close()
 	_, values := fillBadgerValues(t, bdb)
 
 	// Test full reverse iteration
 	it := badgerdb.NewReverseIterator(bdb)
+	defer it.Release()
 	require.NotNil(t, it, "Reverse iterator should not be nil")
 
 	count := 0
@@ -90,8 +127,6 @@ func TestBadgerReverseIterator(t *testing.T) {
 	require.True(t, count == 10, "Should iterate 10 times")
 	require.NoError(t, it.Error(), "Iterator should have no errors")
 
-	defer it.Release()
-	defer bdb.Close()
 }
 
 // TestBadgerReversePrefixIterator tests reverse iteration with prefix

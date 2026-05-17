@@ -1,6 +1,9 @@
 package zerokv
 
-import "context"
+import (
+	"context"
+
+)
 
 // Core defines the main interface for a key-value database
 type Core interface {
@@ -26,6 +29,7 @@ type Iterator interface {
 	Release()      // releases the iterator resources
 	Error() error  // returns any error encountered during iteration
 }
+
 
 // Batch defines methods for batching multiple write operations together
 type Batch interface {

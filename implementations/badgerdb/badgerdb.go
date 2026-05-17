@@ -3,6 +3,7 @@ package badgerdb
 import (
 	"context"
 	"errors"
+	"time"
 
 	zerokv "github.com/rawbytedev/zerokv/core"
 	"github.com/rawbytedev/zerokv/internal"
@@ -48,6 +49,17 @@ func (b *BadgerDB) Put(ctx context.Context, key, value []byte) error {
 	}
 	return b.db.Update(func(txn *badger.Txn) error {
 		return txn.Set(key, value)
+	})
+}
+
+// TTLPut inserts or updates a key-value pair in the database with a ttl attached to it
+func (b *BadgerDB) TTLPut(ctx context.Context, key []byte, value []byte, duration time.Duration) error {
+	if err := internal.CheckContext(ctx); err != nil {
+		return err
+	}
+	return b.db.Update(func(txn *badger.Txn) error {
+		e := badger.NewEntry(key, value).WithTTL(duration)
+		return txn.SetEntry(e)
 	})
 }
 
