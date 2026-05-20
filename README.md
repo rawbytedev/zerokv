@@ -45,7 +45,7 @@ package main
 
 import (
     "context"
-    "github.com/rawbytedev/zerokv/badgerdb"
+    "github.com/rawbytedev/zerokv/implementations/badgerdb"
 )
 
 func main() {
@@ -213,10 +213,13 @@ zerokv/
 │   ├── pebbledb/        # PebbleDB implementation
 │   │   ├── pebbledb.go
 │   │   ├── pebbledb_test.go
+│   │   └── options.go
 │   └── memdb/           # MemDB implementation
 │       ├── mem.go
 │       ├── mem_test.go
 │       └── options.go
+├── ttl/ # ttl implementation
+│   └── ttl.go 
 ├── serializers/         # Serialization helpers
 ├── helpers/             # Test utilities
 ├── testing/             # Shared integration tests

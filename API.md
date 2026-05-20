@@ -573,6 +573,28 @@ if iter.Error() != nil {
 
 ---
 
+## TTL Implementation
+
+### TTLProvider Interface
+
+The `TTLProvider` provide 
+```go
+type TTLProvider interface {
+	TTLPut(ctx context.Context, key, data []byte, ttl time.Duration) error
+}
+```
+
+**TTLPut** : Insert an entry with specified ttl(duration to live)
+
+```go
+type BatchWithTTL interface {
+	zerokv.Batch
+	PutWithTTL(key []byte, data []byte, ttl time.Duration) error
+}
+```
+
+**PutWithTTL** : Insert an entry with specified ttl in a batch - it requires a commit later
+
 ## Error Handling
 
 ### Return Values

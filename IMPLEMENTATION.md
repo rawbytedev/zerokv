@@ -22,6 +22,13 @@ The three main components to implement are:
 2. **Batch** - Batch operation interface (Put, Delete, Commit)
 3. **Iterator** - Iteration interface (Next, Key, Value, Release, Error)
 
+With an optional component:
+
+1. TTL(Time-to-live)
+
+**TTLProvider** - interface for assigning TTL to entries (TTLPut)
+**BatchWithTTL** - interface for Batch operations on TTL entries (PutWithTTL)
+
 ## Prerequisites
 
 - Go 1.25.2 or higher
@@ -322,6 +329,34 @@ func (it *myIterator) Error() error {
 }
 ```
 
+### Step 8: Implement TTL(Time To Live) (optional)
+
+
+```go
+// single insertion
+func (b *myDB) TTLPut(ctx context.Context, key []byte, value []byte, duration time.Duration) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+    // in this case that's how to set TTL to entries in badger
+    // make sure to refer to you're specific DB for correct usage
+	return b.db.Update(func(txn *badger.Txn) error {
+		e := badger.NewEntry(key, value).WithTTL(duration)
+		return txn.SetEntry(e)
+	})
+}
+```
+
+```go
+// Batch insertion with ttl
+func (b *badgerBatch) PutWithTTL(key []byte, value []byte, ttl time.Duration) error {
+	// in this case that's how to set TTL to entries in badger
+    // make sure to refer to you're specific DB for correct usage
+    e := badger.NewEntry(key, value).WithTTL(ttl)
+	return b.batch.SetEntry(e)
+}
+```
+
 ## Error Handling Strategy
 
 ### Key Principles
@@ -532,6 +567,11 @@ Note: Ensuring Implementations are consistent `return error or turn panics into 
 - `Key()` and `Value()` return correct data
 - `Release()` closes resources
 - `Error()` never panics (returns nil if no error)
+
+### TTL (Time to Live) Operations
+
+- `TTLPut` works if available
+- `PutWithTTL` works if available
 
 ### Context Handling
 
