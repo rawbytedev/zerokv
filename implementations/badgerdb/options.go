@@ -11,3 +11,7 @@ type Config struct {
 func DefaultOptions(Dir string) *Config {
 	return &Config{Dir, nil}
 }
+
+func WithEncryptionKey(opts badger.Options, key []byte) badger.Options {
+	return opts.WithEncryptionKey(key)
+}

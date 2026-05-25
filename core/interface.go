@@ -1,6 +1,8 @@
 package zerokv
 
-import "context"
+import (
+	"context"
+)
 
 // Core defines the main interface for a key-value database
 type Core interface {
