@@ -32,7 +32,6 @@ func (m *MemDB) Put(ctx context.Context, key []byte, data []byte) error {
 	return m.db.Put(key, data)
 }
 
-
 // Get retrieves the value for a given key. Returns an error if not found.
 func (m *MemDB) Get(ctx context.Context, key []byte) ([]byte, error) {
 	if err := internal.CheckContext(ctx); err != nil {
