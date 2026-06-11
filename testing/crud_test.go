@@ -49,6 +49,7 @@ func TestZeroKvImplementation(t *testing.T) {
 // TestGetPutDelete tests basic Put, Get, and Delete operations.
 func testGetPutDelete(t *testing.T, name string) {
 	db := fixture.SetupDB(t, name)
+	defer db.Close()
 	keys := make([][]byte, 10)
 	values := make([][]byte, 10)
 	for i := 0; i < 10; i++ {
@@ -68,21 +69,21 @@ func testGetPutDelete(t *testing.T, name string) {
 		_, err = db.Get(t.Context(), keys[i])
 		require.Error(t, err, "Expected error retrieving deleted key")
 	}
-	defer db.Close()
 }
 
 // TestGetNonExistentKey tests retrieval of a non-existent key.
 func testGetNonExistentKey(t *testing.T, name string) {
 	db := fixture.SetupDB(t, name)
+	defer db.Close()
 	nonExistentKey := fixture.RandomBytes(16)
 	_, err := db.Get(t.Context(), nonExistentKey)
 	require.Error(t, err, "Expected error when getting non-existent key")
-	defer db.Close()
 }
 
 // TestOverwriteKey tests overwriting an existing key.
 func testOverwriteKey(t *testing.T, name string) {
 	db := fixture.SetupDB(t, name)
+	defer db.Close()
 	key := fixture.RandomBytes(16)
 	value1 := fixture.RandomBytes(32)
 	value2 := fixture.RandomBytes(32)
@@ -96,12 +97,12 @@ func testOverwriteKey(t *testing.T, name string) {
 	retrievedValue, err = db.Get(t.Context(), key)
 	require.NoError(t, err, "Error getting second value")
 	require.Equal(t, value2, retrievedValue, "Second retrieved value does not match")
-	defer db.Close()
+
 }
 
-// TestClose tests closing the PebbleDB instance.
+// TestClose tests closing the DB instance.
 func testClose(t *testing.T, name string) {
 	db := fixture.SetupDB(t, name)
 	err := db.Close()
-	require.NoError(t, err, "Error closing PebbleDB")
+	require.NoError(t, err, "Error closing DB")
 }

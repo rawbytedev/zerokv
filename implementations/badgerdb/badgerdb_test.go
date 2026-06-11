@@ -10,9 +10,75 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+<<<<<<< Updated upstream
 // TestBadgerBatchOperations tests batch Put and Get operations.
 func TestBadgerBatchOperations(t *testing.T) {
 	db := fixture.SetupDB(t, "badgerdb")
+=======
+func TestTTTL(t *testing.T) {
+	db := fixture.SetupDB(t, "badgerdb")
+	defer db.Close()
+
+	key := []byte{0x1, 0x12, 0x23}
+	value := []byte{0x1, 0x12, 0x23}
+
+	if ttlDB, ok := db.(ttl.TTLProvider); ok {
+		ttlDB.TTLPut(t.Context(), key, value, 5*time.Second)
+	} else {
+		t.Fatal("this database does not support TTL")
+	}
+
+	time.Sleep(6 * time.Second)
+
+	data, err := db.Get(t.Context(), key)
+	require.Nil(t, data, "Value not nil after expiry")
+	require.NotNil(t, err, "No error returned for key not found")
+}
+
+func TestBatchTTL(t *testing.T) {
+	db := fixture.SetupDB(t, "badgerdb")
+	defer db.Close()
+
+	batch := db.Batch()
+
+	key := []byte{0x1, 0x12, 0x23}
+	value := []byte{0x1, 0x12, 0x23}
+	key2 := []byte{0x1, 0x12, 0x48}
+
+	if ttlDB, ok := batch.(ttl.BatchWithTTL); ok {
+		ttlDB.PutWithTTL(key, value, 3*time.Second)
+		ttlDB.PutWithTTL(key2, value, 1*time.Minute)
+	} else {
+		t.Fatal("this database does not support TTL")
+	}
+
+	err := batch.Commit(t.Context())
+	require.Nil(t, err, "Batch Operation failed")
+
+	time.Sleep(10 * time.Second)
+
+	data, err := db.Get(t.Context(), key)
+	require.Nil(t, data, "Value not nil after expiry")
+	require.NotNil(t, err, "No error returned for key not found")
+
+	data, err = db.Get(t.Context(), key2)
+	require.Nil(t, err, "Err should be nil")
+	require.Equal(t, data, value)
+}
+
+func TestKeyNil(t *testing.T) {
+	db := fixture.SetupDB(t, "badgerdb")
+	defer db.Close()
+	err := db.Put(t.Context(), nil, nil)
+	require.Error(t, err, "Badgerdb return error on key nil")
+}
+
+// TestBadgerBatchOperations tests batch Put and Get operations.
+func TestBadgerBatchOperations(t *testing.T) {
+	db := fixture.SetupDB(t, "badgerdb")
+	defer db.Close()
+
+>>>>>>> Stashed changes
 	batch := db.Batch()
 	keys := make([][]byte, 5)
 	values := make([][]byte, 5)
@@ -56,17 +122,19 @@ func fillBadgerValues(t *testing.T, db zerokv.Core) ([][]byte, [][]byte) {
 
 // TestBadgerReverseIterator tests full reverse iteration
 func TestBadgerReverseIterator(t *testing.T) {
-	// Create a temporary badgerdb instance directly
-	tmp := t.TempDir()
-	dbInterface, err := badgerdb.NewBadgerDB(badgerdb.Config{Dir: tmp})
-	require.NoError(t, err)
+	db := fixture.SetupDB(t, "badgerdb")
+	defer db.Close()
 
-	// Type assertion to get concrete type - this works within the package
-	bdb := dbInterface.(*badgerdb.BadgerDB)
+	_, values := fillBadgerValues(t, db)
+
+	bdb := db.(*badgerdb.BadgerDB)
 	require.NotNil(t, bdb)
+<<<<<<< Updated upstream
 
 	_, values := fillBadgerValues(t, bdb)
 
+=======
+>>>>>>> Stashed changes
 	// Test full reverse iteration
 	it := badgerdb.NewReverseIterator(bdb)
 	require.NotNil(t, it, "Reverse iterator should not be nil")
@@ -96,17 +164,17 @@ func TestBadgerReverseIterator(t *testing.T) {
 
 // TestBadgerReversePrefixIterator tests reverse iteration with prefix
 func TestBadgerReversePrefixIterator(t *testing.T) {
-	tmp := t.TempDir()
-	dbInterface, err := badgerdb.NewBadgerDB(badgerdb.Config{Dir: tmp})
-	require.NoError(t, err)
+	db := fixture.SetupDB(t, "badgerdb")
+	defer db.Close()
 
-	bdb := dbInterface.(*badgerdb.BadgerDB)
+	_, values := fillBadgerValues(t, db)
+
+	bdb := db.(*badgerdb.BadgerDB)
 	require.NotNil(t, bdb)
-
-	_, values := fillBadgerValues(t, bdb)
 
 	// Test reverse prefix iteration
 	it := badgerdb.NewReversePrefixIterator(bdb, []byte("pre_"))
+	defer it.Release()
 	require.NotNil(t, it, "Reverse prefix iterator should not be nil")
 
 	count := 0
@@ -129,17 +197,14 @@ func TestBadgerReversePrefixIterator(t *testing.T) {
 	require.Equal(t, 10, count, "Should iterate exactly 10 times")
 	require.NoError(t, it.Error(), "Iterator should have no errors")
 
-	defer it.Release()
-	defer bdb.Close()
 }
 
 // TestBadgerReverseIteratorOrder verifies reverse order
 func TestBadgerReverseIteratorOrder(t *testing.T) {
-	tmp := t.TempDir()
-	dbInterface, err := badgerdb.NewBadgerDB(badgerdb.Config{Dir: tmp})
-	require.NoError(t, err)
+	db := fixture.SetupDB(t, "badgerdb")
+	defer db.Close()
 
-	bdb := dbInterface.(*badgerdb.BadgerDB)
+	bdb := db.(*badgerdb.BadgerDB)
 	require.NotNil(t, bdb)
 
 	// Insert keys in predictable order
@@ -166,15 +231,13 @@ func TestBadgerReverseIteratorOrder(t *testing.T) {
 	// Get reverse order
 	reverseKeys := make([][]byte, 0)
 	rit := badgerdb.NewReversePrefixIterator(bdb, []byte("key_"))
+	defer rit.Release()
 	for rit.Next() {
 		reverseKeys = append(reverseKeys, rit.Key())
 	}
-	rit.Release()
 	// Verify they're in opposite order
 	require.Equal(t, len(forwardKeys), len(reverseKeys), "Should have same count")
 	for i := 0; i < len(forwardKeys); i++ {
 		require.Equal(t, forwardKeys[i], reverseKeys[len(reverseKeys)-1-i], "Keys should be in reverse order")
 	}
-
-	defer bdb.Close()
 }

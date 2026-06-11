@@ -13,6 +13,7 @@ import (
 // TestPebbleBatchOperations tests batch Put and Get operations.
 func TestPebbleBatchOperations(t *testing.T) {
 	db := fixture.SetupDB(t, "pebbledb")
+	defer db.Close()
 	batch := db.Batch()
 	keys := make([][]byte, 5)
 	values := make([][]byte, 5)
@@ -38,7 +39,6 @@ func TestPebbleBatchOperations(t *testing.T) {
 	require.Panics(t, func() {
 		batch.Commit(t.Context())
 	})
-	defer db.Close()
 }
 
 // Helper to fill database with test values
@@ -57,19 +57,27 @@ func fillPebbleValues(t *testing.T, db zerokv.Core) ([][]byte, [][]byte) {
 	return keys, values
 }
 
+// TestNil tests
+func TestKeyNil(t *testing.T) {
+	db := fixture.SetupDB(t, "pebbledb")
+	defer db.Close()
+	err := db.Put(t.Context(), nil, nil)
+	require.NoError(t, err, "Pebble doesn't return error on key nil")
+}
+
 // TestPebbleReverseIterator tests full reverse iteration
 func TestPebbleReverseIterator(t *testing.T) {
-	tmp := t.TempDir()
-	dbInterface, err := pebbledb.NewPebbleDB(pebbledb.Config{Dir: tmp})
-	require.NoError(t, err)
+	db := fixture.SetupDB(t, "pebbledb")
+	defer db.Close()
 
-	pdb := dbInterface.(*pebbledb.PebbleDB)
+	pdb := db.(*pebbledb.PebbleDB)
 	require.NotNil(t, pdb)
 
 	_, values := fillPebbleValues(t, pdb)
 
 	// Test full reverse iteration
 	it := pebbledb.NewReverseIterator(pdb)
+	defer it.Release()
 	require.NotNil(t, it, "Reverse iterator should not be nil")
 
 	count := 0
@@ -88,26 +96,23 @@ func TestPebbleReverseIterator(t *testing.T) {
 		}
 		require.True(t, found, "Retrieved value should be from inserted values")
 	}
-	require.True(t, count > 0, "Should iterate at least once")
+	require.True(t, count == 10, "Should iterate 10 times")
 	require.NoError(t, it.Error(), "Iterator should have no errors")
-
-	defer it.Release()
-	defer pdb.Close()
 }
 
 // TestPebbleReversePrefixIterator tests reverse iteration with prefix
 func TestPebbleReversePrefixIterator(t *testing.T) {
-	tmp := t.TempDir()
-	dbInterface, err := pebbledb.NewPebbleDB(pebbledb.Config{Dir: tmp})
-	require.NoError(t, err)
+	db := fixture.SetupDB(t, "pebbledb")
+	defer db.Close()
 
-	pdb := dbInterface.(*pebbledb.PebbleDB)
+	pdb := db.(*pebbledb.PebbleDB)
 	require.NotNil(t, pdb)
 
 	_, values := fillPebbleValues(t, pdb)
 
 	// Test reverse prefix iteration
 	it := pebbledb.NewReversePrefixIterator(pdb, []byte("pre_"))
+	defer it.Release()
 	require.NotNil(t, it, "Reverse prefix iterator should not be nil")
 
 	count := 0
@@ -129,18 +134,14 @@ func TestPebbleReversePrefixIterator(t *testing.T) {
 	}
 	require.Equal(t, 10, count, "Should iterate exactly 10 times")
 	require.NoError(t, it.Error(), "Iterator should have no errors")
-
-	defer it.Release()
-	defer pdb.Close()
 }
 
 // TestPebbleReverseIteratorOrder verifies reverse order
 func TestPebbleReverseIteratorOrder(t *testing.T) {
-	tmp := t.TempDir()
-	dbInterface, err := pebbledb.NewPebbleDB(pebbledb.Config{Dir: tmp})
-	require.NoError(t, err)
+	db := fixture.SetupDB(t, "pebbledb")
+	defer db.Close()
 
-	pdb := dbInterface.(*pebbledb.PebbleDB)
+	pdb := db.(*pebbledb.PebbleDB)
 	require.NotNil(t, pdb)
 
 	// Insert keys in predictable order
@@ -167,16 +168,13 @@ func TestPebbleReverseIteratorOrder(t *testing.T) {
 	// Get reverse order
 	reverseKeys := make([][]byte, 0)
 	rit := pebbledb.NewReversePrefixIterator(pdb, []byte("key_"))
+	defer rit.Release()
 	for rit.Next() {
 		reverseKeys = append(reverseKeys, rit.Key())
 	}
-	rit.Release()
-
 	// Verify they're in opposite order
 	require.Equal(t, len(forwardKeys), len(reverseKeys), "Should have same count")
 	for i := 0; i < len(forwardKeys); i++ {
 		require.Equal(t, forwardKeys[i], reverseKeys[len(reverseKeys)-1-i], "Keys should be in reverse order")
 	}
-
-	defer pdb.Close()
 }
