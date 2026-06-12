@@ -12,189 +12,11 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-<<<<<<< Updated upstream
-// TestBadgerBatchOperations tests batch Put and Get operations.
-func TestBadgerBatchOperations(t *testing.T) {
-	db := fixture.SetupDB(t, "badgerdb")
-=======
-func TestTTTL(t *testing.T) {
-	db := fixture.SetupDB(t, "badgerdb")
-	defer db.Close()
-
-	key := []byte{0x1, 0x12, 0x23}
-	value := []byte{0x1, 0x12, 0x23}
-
-	if ttlDB, ok := db.(ttl.TTLProvider); ok {
-		ttlDB.TTLPut(t.Context(), key, value, 5*time.Second)
-	} else {
-		t.Fatal("this database does not support TTL")
-	}
-
-	time.Sleep(6 * time.Second)
-
-	data, err := db.Get(t.Context(), key)
-	require.Nil(t, data, "Value not nil after expiry")
-	require.NotNil(t, err, "No error returned for key not found")
-}
-
-func TestBatchTTL(t *testing.T) {
-	db := fixture.SetupDB(t, "badgerdb")
-	defer db.Close()
-
-	batch := db.Batch()
-
-	key := []byte{0x1, 0x12, 0x23}
-	value := []byte{0x1, 0x12, 0x23}
-	key2 := []byte{0x1, 0x12, 0x48}
-
-	if ttlDB, ok := batch.(ttl.BatchWithTTL); ok {
-		ttlDB.PutWithTTL(key, value, 3*time.Second)
-		ttlDB.PutWithTTL(key2, value, 1*time.Minute)
-	} else {
-		t.Fatal("this database does not support TTL")
-	}
-
-	err := batch.Commit(t.Context())
-	require.Nil(t, err, "Batch Operation failed")
-
-	time.Sleep(10 * time.Second)
-
-	data, err := db.Get(t.Context(), key)
-	require.Nil(t, data, "Value not nil after expiry")
-	require.NotNil(t, err, "No error returned for key not found")
-
-	data, err = db.Get(t.Context(), key2)
-	require.Nil(t, err, "Err should be nil")
-	require.Equal(t, data, value)
-}
-
-func TestKeyNil(t *testing.T) {
-	db := fixture.SetupDB(t, "badgerdb")
-	defer db.Close()
-	err := db.Put(t.Context(), nil, nil)
-	require.Error(t, err, "Badgerdb return error on key nil")
-}
-
-func TestTTTL(t *testing.T) {
-	db := fixture.SetupDB(t, "badgerdb")
-	defer db.Close()
-
-	key := []byte{0x1, 0x12, 0x23}
-	value := []byte{0x1, 0x12, 0x23}
-
-	if ttlDB, ok := db.(ttl.TTLProvider); ok {
-		ttlDB.TTLPut(t.Context(), key, value, 5*time.Second)
-	} else {
-		t.Fatal("this database does not support TTL")
-	}
-
-	time.Sleep(6 * time.Second)
-
-	data, err := db.Get(t.Context(), key)
-	require.Nil(t, data, "Value not nil after expiry")
-	require.NotNil(t, err, "No error returned for key not found")
-}
-
-func TestBatchTTL(t *testing.T) {
-	db := fixture.SetupDB(t, "badgerdb")
-	defer db.Close()
-
-	batch := db.Batch()
-
-	key := []byte{0x1, 0x12, 0x23}
-	value := []byte{0x1, 0x12, 0x23}
-	key2 := []byte{0x1, 0x12, 0x48}
-
-	if ttlDB, ok := batch.(ttl.BatchWithTTL); ok {
-		ttlDB.PutWithTTL(key, value, 3*time.Second)
-		ttlDB.PutWithTTL(key2, value, 1*time.Minute)
-	} else {
-		t.Fatal("this database does not support TTL")
-	}
-
-	err := batch.Commit(t.Context())
-	require.Nil(t, err, "Batch Operation failed")
-
-	time.Sleep(10 * time.Second)
-
-	data, err := db.Get(t.Context(), key)
-	require.Nil(t, data, "Value not nil after expiry")
-	require.NotNil(t, err, "No error returned for key not found")
-
-	data, err = db.Get(t.Context(), key2)
-	require.Nil(t, err, "Err should be nil")
-	require.Equal(t, data, value)
-}
-
-<<<<<<< Updated upstream
-// TestBadgerBatchOperations tests batch Put and Get operations.
-func TestBadgerBatchOperations(t *testing.T) {
-	db := fixture.SetupDB(t, "badgerdb")
-=======
-func TestTTTL(t *testing.T) {
-	db := fixture.SetupDB(t, "badgerdb")
-	defer db.Close()
-
-	key := []byte{0x1, 0x12, 0x23}
-	value := []byte{0x1, 0x12, 0x23}
-
-	if ttlDB, ok := db.(ttl.TTLProvider); ok {
-		ttlDB.TTLPut(t.Context(), key, value, 5*time.Second)
-	} else {
-		t.Fatal("this database does not support TTL")
-	}
-
-	time.Sleep(6 * time.Second)
-
-	data, err := db.Get(t.Context(), key)
-	require.Nil(t, data, "Value not nil after expiry")
-	require.NotNil(t, err, "No error returned for key not found")
-}
-
-func TestBatchTTL(t *testing.T) {
-	db := fixture.SetupDB(t, "badgerdb")
-	defer db.Close()
-
-	batch := db.Batch()
-
-	key := []byte{0x1, 0x12, 0x23}
-	value := []byte{0x1, 0x12, 0x23}
-	key2 := []byte{0x1, 0x12, 0x48}
-
-	if ttlDB, ok := batch.(ttl.BatchWithTTL); ok {
-		ttlDB.PutWithTTL(key, value, 3*time.Second)
-		ttlDB.PutWithTTL(key2, value, 1*time.Minute)
-	} else {
-		t.Fatal("this database does not support TTL")
-	}
-
-	err := batch.Commit(t.Context())
-	require.Nil(t, err, "Batch Operation failed")
-
-	time.Sleep(10 * time.Second)
-
-	data, err := db.Get(t.Context(), key)
-	require.Nil(t, data, "Value not nil after expiry")
-	require.NotNil(t, err, "No error returned for key not found")
-
-	data, err = db.Get(t.Context(), key2)
-	require.Nil(t, err, "Err should be nil")
-	require.Equal(t, data, value)
-}
-
-func TestKeyNil(t *testing.T) {
-	db := fixture.SetupDB(t, "badgerdb")
-	defer db.Close()
-	err := db.Put(t.Context(), nil, nil)
-	require.Error(t, err, "Badgerdb return error on key nil")
-}
-
 // TestBadgerBatchOperations tests batch Put and Get operations.
 func TestBadgerBatchOperations(t *testing.T) {
 	db := fixture.SetupDB(t, "badgerdb")
 	defer db.Close()
 
->>>>>>> Stashed changes
 	batch := db.Batch()
 	keys := make([][]byte, 5)
 	values := make([][]byte, 5)
@@ -217,7 +39,7 @@ func TestBadgerBatchOperations(t *testing.T) {
 	// This should also fail because the batch has already been committed
 	err = batch.Commit(t.Context())
 	require.Error(t, err, "Batch commit not permitted after finish")
-
+	defer db.Close()
 }
 
 // Helper to fill database with test values
@@ -244,25 +66,9 @@ func TestBadgerReverseIterator(t *testing.T) {
 	_, values := fillBadgerValues(t, db)
 
 	bdb := db.(*badgerdb.BadgerDB)
-	db := fixture.SetupDB(t, "badgerdb")
-	defer db.Close()
-
-	_, values := fillBadgerValues(t, db)
-
-	bdb := db.(*badgerdb.BadgerDB)
 	require.NotNil(t, bdb)
-<<<<<<< Updated upstream
-
-	defer bdb.Close()
-	_, values := fillBadgerValues(t, bdb)
-
-=======
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
 	// Test full reverse iteration
 	it := badgerdb.NewReverseIterator(bdb)
-	defer it.Release()
 	require.NotNil(t, it, "Reverse iterator should not be nil")
 
 	count := 0
@@ -284,14 +90,12 @@ func TestBadgerReverseIterator(t *testing.T) {
 	require.True(t, count == 10, "Should iterate 10 times")
 	require.NoError(t, it.Error(), "Iterator should have no errors")
 
+	defer it.Release()
+	defer bdb.Close()
 }
 
 // TestBadgerReversePrefixIterator tests reverse iteration with prefix
 func TestBadgerReversePrefixIterator(t *testing.T) {
-	db := fixture.SetupDB(t, "badgerdb")
-	defer db.Close()
-
-	_, values := fillBadgerValues(t, db)
 	db := fixture.SetupDB(t, "badgerdb")
 	defer db.Close()
 
@@ -331,10 +135,7 @@ func TestBadgerReversePrefixIterator(t *testing.T) {
 func TestBadgerReverseIteratorOrder(t *testing.T) {
 	db := fixture.SetupDB(t, "badgerdb")
 	defer db.Close()
-	db := fixture.SetupDB(t, "badgerdb")
-	defer db.Close()
 
-	bdb := db.(*badgerdb.BadgerDB)
 	bdb := db.(*badgerdb.BadgerDB)
 	require.NotNil(t, bdb)
 
@@ -363,7 +164,6 @@ func TestBadgerReverseIteratorOrder(t *testing.T) {
 	reverseKeys := make([][]byte, 0)
 	rit := badgerdb.NewReversePrefixIterator(bdb, []byte("key_"))
 	defer rit.Release()
-	defer rit.Release()
 	for rit.Next() {
 		reverseKeys = append(reverseKeys, rit.Key())
 	}
@@ -372,4 +172,62 @@ func TestBadgerReverseIteratorOrder(t *testing.T) {
 	for i := 0; i < len(forwardKeys); i++ {
 		require.Equal(t, forwardKeys[i], reverseKeys[len(reverseKeys)-1-i], "Keys should be in reverse order")
 	}
+}
+
+func TestTTTL(t *testing.T) {
+	db := fixture.SetupDB(t, "badgerdb")
+	defer db.Close()
+
+	key := []byte{0x1, 0x12, 0x23}
+	value := []byte{0x1, 0x12, 0x23}
+
+	if ttlDB, ok := db.(ttl.TTLProvider); ok {
+		ttlDB.TTLPut(t.Context(), key, value, 5*time.Second)
+	} else {
+		t.Fatal("this database does not support TTL")
+	}
+
+	time.Sleep(6 * time.Second)
+
+	data, err := db.Get(t.Context(), key)
+	require.Nil(t, data, "Value not nil after expiry")
+	require.NotNil(t, err, "No error returned for key not found")
+}
+
+func TestBatchTTL(t *testing.T) {
+	db := fixture.SetupDB(t, "badgerdb")
+	defer db.Close()
+
+	batch := db.Batch()
+
+	key := []byte{0x1, 0x12, 0x23}
+	value := []byte{0x1, 0x12, 0x23}
+	key2 := []byte{0x1, 0x12, 0x48}
+
+	if ttlDB, ok := batch.(ttl.BatchWithTTL); ok {
+		ttlDB.PutWithTTL(key, value, 3*time.Second)
+		ttlDB.PutWithTTL(key2, value, 1*time.Minute)
+	} else {
+		t.Fatal("this database does not support TTL")
+	}
+
+	err := batch.Commit(t.Context())
+	require.Nil(t, err, "Batch Operation failed")
+
+	time.Sleep(10 * time.Second)
+
+	data, err := db.Get(t.Context(), key)
+	require.Nil(t, data, "Value not nil after expiry")
+	require.NotNil(t, err, "No error returned for key not found")
+
+	data, err = db.Get(t.Context(), key2)
+	require.Nil(t, err, "Err should be nil")
+	require.Equal(t, data, value)
+}
+
+func TestKeyNil(t *testing.T) {
+	db := fixture.SetupDB(t, "badgerdb")
+	defer db.Close()
+	err := db.Put(t.Context(), nil, nil)
+	require.Error(t, err, "Badgerdb return error on key nil")
 }
