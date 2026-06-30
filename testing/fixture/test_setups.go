@@ -11,6 +11,12 @@ import (
 	encoders "github.com/rawbytedev/zerokv/serializers"
 )
 
+var AllDBs = []string{
+	"pebbledb",
+	"badgerdb",
+	"memdb",
+}
+
 // setupBadgerDB creates a temporary BadgerDB instance for testing.
 func SetupDB(t *testing.T, name string) zerokv.Core {
 	tmp := t.TempDir()
