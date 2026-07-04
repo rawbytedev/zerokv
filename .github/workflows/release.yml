@@ -1,0 +1,31 @@
+name: Manual Release Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g., v1.0.0)'
+        required: true
+        type: string
+      draft:
+        description: 'Create as draft release'
+        type: boolean
+        default: true
+jobs:
+    release:
+        name: Create draft release
+        runs-on: ubuntu-latest
+        permissions:
+            contents: write  # required to create releases
+        steps:
+        - name: Checkout
+          uses: actions/checkout@v4
+      
+        - name: Create Draft Release and Upload Assets
+          env:
+              GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          run: |
+            gh release create ${{ github.event.inputs.version }} \
+            --title "Release ${{ github.event.inputs.version }}" \
+            --draft=${{ github.event.inputs.draft }} \
+            --generate-notes

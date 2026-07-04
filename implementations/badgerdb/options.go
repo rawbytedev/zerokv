@@ -1,6 +1,8 @@
 package badgerdb
 
-import "github.com/dgraph-io/badger/v4"
+import (
+	"github.com/dgraph-io/badger/v4"
+)
 
 // specific badgerdb options
 type Config struct {

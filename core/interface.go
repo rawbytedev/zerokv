@@ -2,6 +2,7 @@ package zerokv
 
 import (
 	"context"
+
 )
 
 // Core defines the main interface for a key-value database
@@ -15,7 +16,7 @@ type Core interface {
 	// Batch creates a new write batch that needs to be committed separately
 	Batch() Batch
 	// Scan returns an iterator to traverse key-value pairs with the specified prefix
-	Scan(prefix []byte) Iterator
+	Scan(prefix []byte, opts ...ScanOption) Iterator
 	// Close closes the database connection
 	Close() error
 }
@@ -26,6 +27,7 @@ type Iterator interface {
 	Key() []byte   // returns the current key
 	Value() []byte // returns the current value
 	Release()      // releases the iterator resources
+	Reset()        // reset the iterator to the zero-th element based on type of iteration; forward/backward
 	Error() error  // returns any error encountered during iteration
 }
 

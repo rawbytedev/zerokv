@@ -80,7 +80,7 @@ func (m *MemBatch) Commit(ctx context.Context) error {
 	}
 	return m.batch.Write()
 }
-func (m *MemDB) Scan(value []byte) zerokv.Iterator {
+func (m *MemDB) Scan(value []byte, opts ...zerokv.ScanOption) zerokv.Iterator {
 	// MemDB does not support range scanning/iteration
 	// Returns nil to indicate this operation is not supported
 	return nil

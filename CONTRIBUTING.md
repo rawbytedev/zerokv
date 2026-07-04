@@ -258,7 +258,7 @@ func (n *newDB) Batch() zerokv.Batch {
     return &newBatch{batch: n.db.NewBatch()}
 }
 
-func (n *newDB) Scan(prefix []byte) zerokv.Iterator {
+func (n *newDB) Scan(prefix []byte, opts ...ScanOption) zerokv.Iterator {
     it := n.db.NewIterator(prefix)
     return &newIterator{Iterator: it, started: false, valid: false}
 }

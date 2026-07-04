@@ -20,13 +20,7 @@ type pebbleIterator struct {
 	started  bool
 	valid    bool
 	err      internal.IteratorErrors
-}
-
-type pebbleReverseIterator struct {
-	Iterator *pebble.Iterator
-	started  bool
-	valid    bool
-	err      internal.IteratorErrors
+	reverse  bool
 }
 
 // NewPebbleDB initializes and returns a zerokv.Core instance at the specified path(PebbleDB).
@@ -113,27 +107,44 @@ func (p *pebbleBatch) Commit(ctx context.Context) error {
 
 // -- Iterator operations
 
-func (p *PebbleDB) Scan(prefix []byte) zerokv.Iterator {
-	upbound := make([]byte, len(prefix))
-	copy(upbound, prefix)
-	upbound[len(upbound)-1]++
+func (p *PebbleDB) Scan(prefix []byte, opts ...zerokv.ScanOption) zerokv.Iterator {
+	scanCfg := zerokv.NewScanConfig()
+	for _, opt := range opts {
+		opt(scanCfg)
+	}
+	var upbound []byte
+	if prefix != nil {
+		upbound = make([]byte, len(prefix))
+		copy(upbound, prefix)
+		upbound[len(upbound)-1]++
+	}
 	it, err := p.db.NewIter(&pebble.IterOptions{
 		LowerBound: prefix,
 		UpperBound: upbound,
 	})
 	if err != nil {
 		return nil
+
 	}
-	return &pebbleIterator{Iterator: it, valid: false, started: false}
+
+	return &pebbleIterator{Iterator: it, valid: false, started: false, reverse: scanCfg.Reverse}
 }
 
 func (it *pebbleIterator) Next() bool {
-	// this comes from how iterators works in pebble
-	if !it.started {
-		it.valid = it.Iterator.First()
+	switch it.started {
+	case true:
+		if it.reverse {
+			it.valid = it.Iterator.Prev()
+		} else {
+			it.valid = it.Iterator.Next()
+		}
+	case false:
+		if it.reverse {
+			it.valid = it.Iterator.Last()
+		} else {
+			it.valid = it.Iterator.First()
+		}
 		it.started = true
-	} else {
-		it.valid = it.Iterator.Next()
 	}
 	return it.valid
 }
@@ -156,91 +167,10 @@ func (it *pebbleIterator) Release() {
 	it.valid = false
 	it.Iterator.Close()
 }
+
+func (it *pebbleIterator) Reset() {
+	it.Iterator.First()
+}
 func (it *pebbleIterator) Error() error {
-	return it.err.Error()
-}
-
-// --- specials methods to use with an instance of badgerdb for some other operations
-func NewIterator(p *PebbleDB) zerokv.Iterator {
-	it, err := p.db.NewIter(&pebble.IterOptions{})
-
-	if err != nil {
-		return nil
-	}
-	return &pebbleIterator{Iterator: it, valid: false, started: false}
-}
-
-func NewPrefixIterator(p *PebbleDB, prefix []byte) zerokv.Iterator {
-	upbound := make([]byte, len(prefix))
-	copy(upbound, prefix)
-	upbound[len(upbound)-1]++
-	it, err := p.db.NewIter(&pebble.IterOptions{
-		LowerBound: prefix,
-		UpperBound: upbound,
-	})
-	if err != nil {
-		return nil
-	}
-	return &pebbleIterator{Iterator: it, valid: false, started: false}
-}
-
-// --- Reverse Iterators ---
-
-func NewReverseIterator(p *PebbleDB) zerokv.Iterator {
-	it, err := p.db.NewIter(&pebble.IterOptions{})
-	if err != nil {
-		return nil
-	}
-	return &pebbleReverseIterator{Iterator: it, valid: false, started: false}
-}
-
-func NewReversePrefixIterator(p *PebbleDB, prefix []byte) zerokv.Iterator {
-	upbound := make([]byte, len(prefix))
-	copy(upbound, prefix)
-	if len(upbound) > 0 {
-		upbound[len(upbound)-1]++
-	}
-	it, err := p.db.NewIter(&pebble.IterOptions{
-		LowerBound: prefix,
-		UpperBound: upbound,
-	})
-	if err != nil {
-		return nil
-	}
-	return &pebbleReverseIterator{Iterator: it, valid: false, started: false}
-}
-
-func (it *pebbleReverseIterator) Next() bool {
-	if !it.started {
-		it.valid = it.Iterator.Last()
-		it.started = true
-	} else {
-		it.valid = it.Iterator.Prev()
-	}
-	return it.valid
-}
-
-func (it *pebbleReverseIterator) Key() []byte {
-	if !it.valid {
-		return nil
-	}
-	return it.Iterator.Key()
-}
-
-func (it *pebbleReverseIterator) Value() []byte {
-	if !it.valid {
-		return nil
-	}
-	data, err := it.Iterator.ValueAndErr()
-	it.err.AddError(err)
-	return data
-}
-
-func (it *pebbleReverseIterator) Release() {
-	it.valid = false
-	it.Iterator.Close()
-}
-
-func (it *pebbleReverseIterator) Error() error {
 	return it.err.Error()
 }

@@ -87,6 +87,31 @@ db, _ := badgerdb.NewBadgerDB(badgerdb.Config{Dir: "/tmp/data"})
 db.Put(ctx, []byte("key"), []byte("value"))
 ```
 
+### Scan and Iteration Options
+
+ZeroKV exposes optional scan helpers for reverse traversal and prefetch hints:
+
+```go
+import (
+    "context"
+    zerokv "github.com/rawbytedev/zerokv/core"
+    "github.com/rawbytedev/zerokv/implementations/badgerdb"
+)
+
+ctx := context.Background()
+db, _ := badgerdb.NewBadgerDB(badgerdb.Config{Dir: "/tmp/data"})
+iter := db.Scan([]byte("user:"), zerokv.WithReverse(), zerokv.WithPrefetch())
+defer iter.Release()
+
+for iter.Next() {
+    _ = ctx
+    _ = iter.Key()
+    _ = iter.Value()
+}
+```
+
+Not every backend honors every option. BadgerDB supports reverse traversal and prefetch hints, PebbleDB currently supports reverse traversal, and MemDB does not support scanning.
+
 ## Implementations
 
 ### Built-in Backends
@@ -203,7 +228,8 @@ ZeroKV adds minimal overhead:
 ```js
 zerokv/
 ├── core/
-│   └── interface.go     # Core interfaces
+│   ├── interface.go     # Core interfaces
+│   └── scanner.go       # Scan options and helper types
 ├── internal/            # Internal utilities
 ├── implementations/
 │   ├── badgerdb/        # BadgerDB implementation

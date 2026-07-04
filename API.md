@@ -5,6 +5,7 @@ Complete API documentation for ZeroKV interfaces and types.
 ## Table of Contents
 
 - [Core Interface](#core-interface)
+- [Scan Options](#scan-options)
 - [Batch Interface](#batch-interface)
 - [Iterator Interface](#iterator-interface)
 - [Error Handling](#error-handling)
@@ -20,7 +21,7 @@ type Core interface {
     Get(ctx context.Context, key []byte) ([]byte, error)
     Delete(ctx context.Context, key []byte) error
     Batch() Batch
-    Scan(prefix []byte) Iterator
+    Scan(prefix []byte, opts ...ScanOption) Iterator
     Close() error
 }
 ```
@@ -162,7 +163,7 @@ err := batch.Commit(context.Background())
 #### Scan
 
 ```go
-func (c Core) Scan(prefix []byte) Iterator
+func (c Core) Scan(prefix []byte, opts ...ScanOption) Iterator
 ```
 
 Returns an iterator for keys with the given prefix.
@@ -170,6 +171,7 @@ Returns an iterator for keys with the given prefix.
 **Parameters:**
 
 - `prefix` - The key prefix to scan (can be empty for all keys)
+- `opts` - Set of options for the Iterator
 
 **Returns:**
 
@@ -231,6 +233,36 @@ if err != nil {
 - Releases memory
 - Should be called in a defer statement
 - No operations should be performed after Close()
+
+---
+
+## Scan Options
+
+The scan helpers in the core package provide optional hints for iterators.
+
+```go
+type Scanner interface {
+    ScanWithOpts(prefix []byte, opts ...ScanOption) Iterator
+}
+
+type ScanOption func(*scanConfig)
+
+func WithReverse() ScanOption
+func WithPrefetch() ScanOption
+func NewScanConfig() *scanConfig
+```
+
+### Available options
+
+- `WithReverse()` requests reverse iteration order.
+- `WithPrefetch()` asks a backend to prefetch values when the implementation supports it.
+- `NewScanConfig()` returns the default scan configuration used by implementations.
+
+### Backend behavior
+
+- BadgerDB honors reverse and prefetch settings.
+- PebbleDB currently supports reverse traversal.
+- MemDB does not support scanning and returns `nil` for scan operations.
 
 ---
 
@@ -580,20 +612,25 @@ if iter.Error() != nil {
 The `TTLProvider` provide 
 ```go
 type TTLProvider interface {
-	TTLPut(ctx context.Context, key, data []byte, ttl time.Duration) error
+	zerokv.Core
+	GetTTL(ctx context.Context, key []byte) (time.Duration, error)
+	PutTTL(ctx context.Context, key, data []byte, ttl time.Duration) error
+	UpdateTTL(ctx context.Context, key []byte, ttl time.Duration) error
 }
 ```
-
-**TTLPut** : Insert an entry with specified ttl(duration to live)
-
+**GetTTL**: Retrieve the remaining time before expiry of a key 
+**PutTTL** : Insert an entry with specified ttl(duration to live)
+**UpdateTTL**: Updates a key TTL with the new duration
 ```go
 type BatchWithTTL interface {
 	zerokv.Batch
-	PutWithTTL(key []byte, data []byte, ttl time.Duration) error
+	PutTTL(key []byte, data []byte, ttl time.Duration) error
+    UpdateTTL(key []byte, ttl time.Duration) error
 }
 ```
 
-**PutWithTTL** : Insert an entry with specified ttl in a batch - it requires a commit later
+**PutTTL** : Insert an entry with specified ttl in a batch - it requires a commit later
+**UpdateTTL**: Updates a key TTL with the new duration - requires commit
 
 ## Error Handling
 

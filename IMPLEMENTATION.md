@@ -26,8 +26,8 @@ With an optional component:
 
 1. TTL(Time-to-live)
 
-**TTLProvider** - interface for assigning TTL to entries (TTLPut)
-**BatchWithTTL** - interface for Batch operations on TTL entries (PutWithTTL)
+**TTLProvider** - interface for assigning TTL to entries (PutTTL)
+**BatchWithTTL** - interface for Batch operations on TTL entries (PutTTL)
 
 ## Prerequisites
 
@@ -207,7 +207,17 @@ func (m *myDB) Batch() zerokv.Batch {
 
 ```go
 // Scan returns an iterator for keys with the given prefix
-func (m *myDB) Scan(prefix []byte) zerokv.Iterator {
+func (m *myDB) Scan(prefix []byte, opts ...ScanOption) zerokv.Iterator {
+    scanCfg := zerokv.NewScanConfig()
+    for _, opt := range opts {
+        opt(scanCfg)
+    }
+
+    // Return nil if the backend does not support scanning.
+    if !m.supportsScan {
+        return nil
+    }
+
     iter := m.db.NewIterator(yourdb.IterOptions{Prefix: prefix})
     return &myIterator{
         Iterator: iter,
@@ -217,6 +227,8 @@ func (m *myDB) Scan(prefix []byte) zerokv.Iterator {
     }
 }
 ```
+
+The built-in scan helpers are `WithReverse()` and `WithPrefetch()`. Not every backend needs to honor every option, so the implementation should document which flags are actually supported.
 
 #### Close
 
@@ -334,7 +346,7 @@ func (it *myIterator) Error() error {
 
 ```go
 // single insertion
-func (b *myDB) TTLPut(ctx context.Context, key []byte, value []byte, duration time.Duration) error {
+func (b *myDB) PutTTL(ctx context.Context, key []byte, value []byte, duration time.Duration) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
@@ -349,7 +361,7 @@ func (b *myDB) TTLPut(ctx context.Context, key []byte, value []byte, duration ti
 
 ```go
 // Batch insertion with ttl
-func (b *badgerBatch) PutWithTTL(key []byte, value []byte, ttl time.Duration) error {
+func (b *badgerBatch) PutTTL(key []byte, value []byte, ttl time.Duration) error {
 	// in this case that's how to set TTL to entries in badger
     // make sure to refer to you're specific DB for correct usage
     e := badger.NewEntry(key, value).WithTTL(ttl)
@@ -570,8 +582,8 @@ Note: Ensuring Implementations are consistent `return error or turn panics into 
 
 ### TTL (Time to Live) Operations
 
-- `TTLPut` works if available
-- `PutWithTTL` works if available
+- `PutTTL` works if available
+- `PutTTL` works if available
 
 ### Context Handling
 

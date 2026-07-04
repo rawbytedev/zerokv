@@ -16,6 +16,7 @@ type BadgerDB struct {
 }
 type badgerBatch struct {
 	batch *badger.WriteBatch
+	db    *BadgerDB
 }
 
 type badgerIterator struct {
@@ -23,6 +24,7 @@ type badgerIterator struct {
 	started  bool
 	valid    bool
 	err      internal.IteratorErrors
+	reverse  bool
 }
 
 // NewBadgerDB initializes and returns a zerokv.Core instance at the specified path(BadgerDB).
@@ -52,14 +54,46 @@ func (b *BadgerDB) Put(ctx context.Context, key, value []byte) error {
 	})
 }
 
-// TTLPut inserts or updates a key-value pair in the database with a ttl attached to it
-func (b *BadgerDB) TTLPut(ctx context.Context, key []byte, value []byte, duration time.Duration) error {
+// PutTTL inserts or updates a key-value pair in the database with a ttl attached to it
+func (b *BadgerDB) PutTTL(ctx context.Context, key []byte, value []byte, duration time.Duration) error {
 	if err := internal.CheckContext(ctx); err != nil {
 		return err
 	}
 	return b.db.Update(func(txn *badger.Txn) error {
 		e := badger.NewEntry(key, value).WithTTL(duration)
 		return txn.SetEntry(e)
+	})
+}
+
+func (b *BadgerDB) GetTTL(ctx context.Context, key []byte) (time.Duration, error) {
+	var expires time.Duration
+	if err := internal.CheckContext(ctx); err != nil {
+		return 0, err
+	}
+	err := b.db.View(func(txn *badger.Txn) error {
+		item, err := txn.Get(key)
+		if err != nil {
+			return err
+		}
+		expires = time.Until(time.Unix(int64(item.ExpiresAt()), 0))
+		return nil
+	})
+	return expires, err
+}
+
+func (b *BadgerDB) UpdateTTL(ctx context.Context, key []byte, duration time.Duration) error {
+	if err := internal.CheckContext(ctx); err != nil {
+		return err
+	}
+	return b.db.Update(func(txn *badger.Txn) error {
+		item, err := txn.Get(key)
+		if err != nil {
+			return err
+		}
+		return item.Value(func(val []byte) error {
+			e := badger.NewEntry(key, val).WithTTL(duration)
+			return txn.SetEntry(e)
+		})
 	})
 }
 
@@ -111,7 +145,7 @@ func (b *BadgerDB) Close() error {
 
 // Batch creates a new batch operation for the BadgerDB instance.
 func (b *BadgerDB) Batch() zerokv.Batch {
-	return &badgerBatch{batch: b.db.NewWriteBatch()}
+	return &badgerBatch{batch: b.db.NewWriteBatch(), db: b}
 }
 
 // Put inserts or updates a key-value pair in the batch.
@@ -132,21 +166,44 @@ func (b *badgerBatch) Commit(ctx context.Context) error {
 	return b.batch.Flush()
 }
 
-func (b *badgerBatch) PutWithTTL(key []byte, value []byte, ttl time.Duration) error {
+func (b *badgerBatch) PutTTL(key []byte, value []byte, ttl time.Duration) error {
+	e := badger.NewEntry(key, value).WithTTL(ttl)
+	return b.batch.SetEntry(e)
+}
+
+func (b *badgerBatch) UpdateTTL(key []byte, ttl time.Duration) error {
+	value, err := b.db.Get(context.Background(), key)
+	if err != nil {
+		return err
+	}
 	e := badger.NewEntry(key, value).WithTTL(ttl)
 	return b.batch.SetEntry(e)
 }
 
 // -- Iterator operations
 
-func (b *BadgerDB) Scan(prefix []byte) zerokv.Iterator {
+func (b *BadgerDB) Scan(prefix []byte, opts ...zerokv.ScanOption) zerokv.Iterator {
 	txn := b.db.NewTransaction(false)
-	it := txn.NewIterator(badger.IteratorOptions{Prefix: prefix, PrefetchValues: true})
-	return &badgerIterator{Iterator: it}
+	scanCfg := zerokv.NewScanConfig()
+	for _, opt := range opts {
+		opt(scanCfg)
+	}
+	var it *badger.Iterator
+	if prefix != nil {
+		it = txn.NewIterator(badger.IteratorOptions{Prefix: prefix, PrefetchValues: scanCfg.Prefetch, Reverse: scanCfg.Reverse})
+	} else {
+		it = txn.NewIterator(badger.IteratorOptions{PrefetchValues: scanCfg.Prefetch, Reverse: scanCfg.Reverse})
+	}
+	return &badgerIterator{Iterator: it, reverse: scanCfg.Reverse}
 }
+
 func (it *badgerIterator) Next() bool {
 	if !it.started {
-		it.Iterator.Rewind()
+		if it.reverse {
+			it.Iterator.Seek([]byte{0xFF})
+		} else {
+			it.Iterator.Rewind()
+		}
 		it.started = true
 	} else {
 		it.Iterator.Next()
@@ -170,6 +227,10 @@ func (it *badgerIterator) Value() []byte {
 	return data
 }
 
+func (it *badgerIterator) Reset() {
+	it.Iterator.Rewind()
+}
+
 // Release Must be called to avoid memory leaks
 func (it *badgerIterator) Release() {
 	it.Iterator.Close()
@@ -177,72 +238,4 @@ func (it *badgerIterator) Release() {
 
 func (it *badgerIterator) Error() error {
 	return it.err.Error()
-}
-
-//  --- specials methods to use with an instance of badgerdb for some other operations
-
-func NewIterator(b *BadgerDB) zerokv.Iterator {
-	txn := b.db.NewTransaction(false)
-	it := txn.NewIterator(badger.IteratorOptions{PrefetchValues: true})
-	return &badgerIterator{Iterator: it}
-}
-func NewPrefixIterator(b *BadgerDB, prefix []byte) zerokv.Iterator {
-	txn := b.db.NewTransaction(false)
-	it := txn.NewIterator(badger.IteratorOptions{Prefix: prefix, PrefetchValues: true})
-	return &badgerIterator{Iterator: it}
-}
-
-type badgerReverseIterator struct {
-	Iterator *badger.Iterator
-	started  bool
-	valid    bool
-	err      internal.IteratorErrors
-}
-
-func (it *badgerReverseIterator) Next() bool {
-	if !it.started {
-		it.Iterator.Seek([]byte{0xFF}) // Start from the end of the keyspace
-		it.started = true
-	} else {
-		it.Iterator.Next()
-	}
-	it.valid = it.Iterator.Valid()
-	return it.valid
-}
-
-func (it *badgerReverseIterator) Key() []byte {
-	if !it.valid {
-		return nil
-	}
-	return it.Iterator.Item().KeyCopy(nil) // safer, doesn't make changes to key
-}
-func (it *badgerReverseIterator) Value() []byte {
-	if !it.valid {
-		return nil
-	}
-	data, err := it.Iterator.Item().ValueCopy(nil)
-	it.err.AddError(err)
-	return data
-}
-
-// Release Must be called to avoid memory leaks
-func (it *badgerReverseIterator) Release() {
-	it.Iterator.Close()
-}
-
-func (it *badgerReverseIterator) Error() error {
-	return it.err.Error()
-}
-
-func NewReverseIterator(b *BadgerDB) zerokv.Iterator {
-	txn := b.db.NewTransaction(false)
-	it := txn.NewIterator(badger.IteratorOptions{Reverse: true, PrefetchValues: true,
-		PrefetchSize: 100})
-	return &badgerReverseIterator{Iterator: it}
-}
-
-func NewReversePrefixIterator(b *BadgerDB, prefix []byte) zerokv.Iterator {
-	txn := b.db.NewTransaction(false)
-	it := txn.NewIterator(badger.IteratorOptions{Prefix: []byte(prefix), PrefetchValues: true, PrefetchSize: 100, Reverse: true})
-	return &badgerReverseIterator{Iterator: it}
 }

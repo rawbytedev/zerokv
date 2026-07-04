@@ -76,7 +76,7 @@ func TestPebbleReverseIterator(t *testing.T) {
 	_, values := fillPebbleValues(t, pdb)
 
 	// Test full reverse iteration
-	it := pebbledb.NewReverseIterator(pdb)
+	it := pdb.Scan(nil, zerokv.WithReverse())
 	defer it.Release()
 	require.NotNil(t, it, "Reverse iterator should not be nil")
 
@@ -111,7 +111,7 @@ func TestPebbleReversePrefixIterator(t *testing.T) {
 	_, values := fillPebbleValues(t, pdb)
 
 	// Test reverse prefix iteration
-	it := pebbledb.NewReversePrefixIterator(pdb, []byte("pre_"))
+	it := pdb.Scan([]byte("pre_"), zerokv.WithReverse())
 	defer it.Release()
 	require.NotNil(t, it, "Reverse prefix iterator should not be nil")
 
@@ -167,7 +167,7 @@ func TestPebbleReverseIteratorOrder(t *testing.T) {
 
 	// Get reverse order
 	reverseKeys := make([][]byte, 0)
-	rit := pebbledb.NewReversePrefixIterator(pdb, []byte("key_"))
+	rit := pdb.Scan([]byte("key_"), zerokv.WithReverse())
 	defer rit.Release()
 	for rit.Next() {
 		reverseKeys = append(reverseKeys, rit.Key())
